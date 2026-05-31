@@ -48,6 +48,10 @@ namespace Documentshare.Models
 
         public bool IsApproved { get; set; } = false;
 
+        public int? ParentId { get; set; }
+        public Document? Parent { get; set; }
+        public ICollection<Document> SubDocuments { get; set; } = new List<Document>();
+
         public ICollection<Comment> Comments { get; set; } = new List<Comment>();
     }
 }

@@ -23,6 +23,12 @@ namespace Documentshare.Data
                 .HasForeignKey(d => d.CategoryId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<Document>()
+                .HasOne(d => d.Parent)
+                .WithMany(p => p.SubDocuments)
+                .HasForeignKey(d => d.ParentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             modelBuilder.Entity<Comment>()
                 .HasOne(c => c.Document)
                 .WithMany(d => d.Comments)
@@ -50,7 +56,7 @@ namespace Documentshare.Data
                     Id          = 1,
                     Username    = "admin",
                     DisplayName = "Quản trị viên",
-                    Email       = "admin@docshare.local",
+                    Email       = "admin@haudocsshare.local",
                     PasswordHash = "$2a$11$RRwjFuVLhRbHX9bxTKQBpOIm6oHiOhYI3S1pO4fNzI7zGQRJpJEGe",
                     Role        = "Admin",
                     CreatedAt   = new DateTime(2026, 1, 1),

@@ -1,6 +1,6 @@
 @model Documentshare.Models.Document
 @{
-    ViewData["Title"] = "Đăng tài liệu - DocShare";
+    ViewData["Title"] = "Đăng tài liệu - HAUDOCSSHARE";
     var cats = ViewBag.Categories as List<Documentshare.Models.Category> ?? new();
 }
 
@@ -33,10 +33,9 @@
                             <i class="bi bi-file-earmark-arrow-up me-2"></i>Tải tệp từ máy
                         </button>
                         <button type="button" class="btn btn-premium-outline w-50 py-2 btn-type" data-type="link" style="border-radius:var(--radius-sm); font-size:.9rem; font-weight:700;">
-                            <i class="bi bi-google me-2"></i>Link Video Google Drive
+                            <i class="bi bi-google me-2"></i>Link Video / Thư mục Google Drive
                         </button>
                     </div>
-
                     <!-- File Upload Zone -->
                     <div class="mb-4" id="fileUploadContainer">
                         <label class="fw-semibold text-secondary d-block mb-2" style="font-size:.8125rem;letter-spacing:.03em;text-transform:uppercase;">
@@ -63,13 +62,13 @@
                     <!-- Google Drive Link Zone -->
                     <div class="mb-4 d-none" id="driveLinkContainer">
                         <label class="fw-semibold text-secondary d-block mb-2" style="font-size:.8125rem;letter-spacing:.03em;text-transform:uppercase;">
-                            <i class="bi bi-link-45deg me-1"></i>Đường dẫn Video Google Drive
+                            <i class="bi bi-link-45deg me-1"></i>Đường dẫn Video / Thư mục Google Drive
                         </label>
-                        <input type="url" name="driveLink" id="driveLinkInput" class="form-control form-control-premium" value="@ViewBag.DriveLink" placeholder="Ví dụ: https://drive.google.com/file/d/1A2B3C4D5E/view" />
+                        <input type="url" name="driveLink" id="driveLinkInput" class="form-control form-control-premium" value="@ViewBag.DriveLink" placeholder="Ví dụ: https://drive.google.com/drive/folders/1rB85HFVsm2CXSe-6qBFVYkuSaESkiQB8 hoặc link video" />
                         <span class="text-danger small">@Html.ValidationMessage("driveLink")</span>
                         <div class="mt-2 text-muted" style="font-size:.78rem;">
                             <i class="bi bi-info-circle me-1 text-info"></i>
-                            Hãy đảm bảo video đã được chia sẻ ở chế độ <strong>"Bất kỳ ai có liên kết đều có thể xem"</strong> trên Google Drive.
+                            Hãy đảm bảo video hoặc thư mục đã được chia sẻ ở chế độ <strong>"Bất kỳ ai có liên kết đều có thể xem"</strong> trên Google Drive.
                         </div>
                     </div>
 
@@ -80,10 +79,10 @@
                         <!-- Title -->
                         <div class="col-12">
                             <label class="form-label fw-semibold" style="font-size:.8125rem;">
-                                Tiêu đề tài liệu <span class="text-danger">*</span>
+                                Tiêu đề tài liệu / Tên khóa học <span class="text-danger">*</span>
                             </label>
                             <input asp-for="Title" class="form-control form-control-premium"
-                                   placeholder="Ví dụ: Tài liệu lập trình Python cơ bản đến nâng cao" />
+                                   placeholder="Ví dụ: Lập trình Python từ Zero - Hero (hoặc tên tài liệu/khóa học)" />
                             <span asp-validation-for="Title" class="text-danger small"></span>
                         </div>
 

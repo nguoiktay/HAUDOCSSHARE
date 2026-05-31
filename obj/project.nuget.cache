@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "Yi3OV72N1n0=",
+  "dgSpecHash": "nhqTbn5pvCo=",
   "success": true,
-  "projectFilePath": "D:\\Documentshare\\Documentshare.csproj",
+  "projectFilePath": "D:\\Documentshare\\HAUDOCSSHARE\\Documentshare.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\nguoi\\.nuget\\packages\\humanizer.core\\2.14.1\\humanizer.core.2.14.1.nupkg.sha512",
     "C:\\Users\\nguoi\\.nuget\\packages\\microsoft.build.framework\\18.0.2\\microsoft.build.framework.18.0.2.nupkg.sha512",

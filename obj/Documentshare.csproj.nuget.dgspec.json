@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\Documentshare\\Documentshare.csproj": {}
+    "D:\\Documentshare\\HAUDOCSSHARE\\Documentshare.csproj": {}
   },
   "projects": {
-    "D:\\Documentshare\\Documentshare.csproj": {
+    "D:\\Documentshare\\HAUDOCSSHARE\\Documentshare.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Documentshare\\Documentshare.csproj",
+        "projectUniqueName": "D:\\Documentshare\\HAUDOCSSHARE\\Documentshare.csproj",
         "projectName": "Documentshare",
-        "projectPath": "D:\\Documentshare\\Documentshare.csproj",
+        "projectPath": "D:\\Documentshare\\HAUDOCSSHARE\\Documentshare.csproj",
         "packagesPath": "C:\\Users\\nguoi\\.nuget\\packages\\",
-        "outputPath": "D:\\Documentshare\\obj\\",
+        "outputPath": "D:\\Documentshare\\HAUDOCSSHARE\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

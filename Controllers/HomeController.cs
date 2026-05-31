@@ -24,14 +24,15 @@ namespace Documentshare.Controllers
         public async Task<IActionResult> Index(string? q, int? categoryId, string? level, string? ext, string? lang, string sort = "newest")
         {
             var categories = await _context.Categories.ToListAsync();
-            var approvedQ   = _context.Documents.Where(d => d.IsApproved);
+            var allApproved = _context.Documents.Where(d => d.IsApproved);
+            var approvedQ   = allApproved.Where(d => d.ParentId == null);
 
             var vm = new HomeViewModel
             {
                 Categories      = categories,
                 TotalDocuments  = await approvedQ.CountAsync(),
-                TotalDownloads  = await approvedQ.SumAsync(d => (int?)d.DownloadCount) ?? 0,
-                TotalViews      = await approvedQ.SumAsync(d => (int?)d.ViewCount)     ?? 0,
+                TotalDownloads  = await allApproved.SumAsync(d => (int?)d.DownloadCount) ?? 0,
+                TotalViews      = await allApproved.SumAsync(d => (int?)d.ViewCount)     ?? 0,
                 TotalCategories = categories.Count,
                 SearchString    = q     ?? string.Empty,
                 SelectedCategoryId = categoryId,
@@ -49,7 +50,7 @@ namespace Documentshare.Controllers
             var query = _context.Documents
                 .Include(d => d.Category)
                 .Include(d => d.Comments)
-                .Where(d => d.IsApproved);
+                .Where(d => d.IsApproved && d.ParentId == null);
 
             if (!string.IsNullOrWhiteSpace(q))
             {

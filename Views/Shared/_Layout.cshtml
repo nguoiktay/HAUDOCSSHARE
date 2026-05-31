@@ -3,8 +3,8 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="DocShare - Nền tảng chia sẻ tài liệu học tập, nghiên cứu và chuyên môn cho mọi lĩnh vực." />
-    <title>@ViewData["Title"] - DocShare</title>
+    <meta name="description" content="HAUDOCSSHARE - Nền tảng chia sẻ tài liệu học tập, nghiên cứu và chuyên môn cho mọi lĩnh vực." />
+    <title>@ViewData["Title"] - HAUDOCSSHARE</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
@@ -31,7 +31,7 @@
     <nav class="navbar navbar-expand-lg navbar-glass fixed-top">
         <div class="container">
             <a class="navbar-brand" asp-controller="Home" asp-action="Index">
-                <i class="bi bi-journal-bookmark-fill"></i> DocShare
+                <i class="bi bi-journal-bookmark-fill"></i> HAUDOCSSHARE
             </a>
 
             <button class="navbar-toggler border-0 text-white" type="button" data-bs-toggle="collapse" data-bs-target="#navMain" aria-label="Toggle navigation">
@@ -187,7 +187,7 @@
             <div class="col-md-6">
                 <div class="d-flex align-items-center gap-2 mb-1">
                     <span style="font-weight:800;font-size:1.1rem;background:linear-gradient(135deg,#818cf8,#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">
-                        <i class="bi bi-journal-bookmark-fill"></i> DocShare
+                        <i class="bi bi-journal-bookmark-fill"></i> HAUDOCSSHARE
                     </span>
                 </div>
                 <p class="mb-0" style="color:var(--text-secondary);">Nền tảng chia sẻ tài liệu học tập, nghiên cứu &amp; chuyên môn cho mọi lĩnh vực.</p>
@@ -195,7 +195,7 @@
             <div class="col-md-6 text-md-end">
                 <p class="mb-0" style="color:var(--text-muted);">
                     Xây dựng bằng <strong>ASP.NET Core 10</strong> &amp; <strong>SQLite</strong>
-                    &nbsp;·&nbsp; &copy; 2026 DocShare
+                    &nbsp;·&nbsp; &copy; 2026 HAUDOCSSHARE
                 </p>
             </div>
         </div>
@@ -205,6 +205,227 @@
 <script src="~/lib/jquery/dist/jquery.min.js"></script>
 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 <script src="~/js/site.js" asp-append-version="true"></script>
+
+<!-- VIRTUAL ASSISTANT CHATBOT HTML WIDGET -->
+<div class="chatbot-container">
+    <!-- Floating Trigger Button -->
+    <div class="chatbot-float-btn" id="chatbotBtn" title="Trợ lý ảo HAUDOCSSHARE">
+        <i class="bi bi-chat-quote-fill"></i>
+        <div class="chatbot-pulse-dot" id="chatbotPulse"></div>
+    </div>
+
+    <!-- Chat Box Window -->
+    <div class="chatbot-window" id="chatbotWindow">
+        <!-- Header -->
+        <div class="chatbot-header">
+            <div class="chatbot-brand">
+                <div class="chatbot-avatar">
+                    <i class="bi bi-robot"></i>
+                </div>
+                <div class="chatbot-title-info">
+                    <span class="chatbot-title-text">Trợ lý ảo HAU</span>
+                    <span class="chatbot-status-text">Đang hoạt động</span>
+                </div>
+            </div>
+            <button class="chatbot-close-btn" id="chatbotClose" title="Đóng">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+
+        <!-- Scrollable Chat Messages -->
+        <div class="chatbot-body" id="chatbotBody">
+            <div class="chat-msg bot">
+                <p>👋 <strong>Xin chào!</strong> Mình là Trợ lý ảo của <strong>HAUDOCSSHARE</strong>. Mình có thể giúp gì cho bạn hôm nay?</p>
+            </div>
+        </div>
+
+        <!-- Suggestion Chips -->
+        <div class="chatbot-suggestions-container" id="chatbotSuggestions">
+            <span class="chatbot-suggestion-chip" onclick="sendSuggestion('Tìm đề thi')">🔍 Tìm đề thi</span>
+            <span class="chatbot-suggestion-chip" onclick="sendSuggestion('Cách đăng tài liệu?')">📤 Cách đăng tài liệu?</span>
+            <span class="chatbot-suggestion-chip" onclick="sendSuggestion('Liên hệ Admin')">✉️ Liên hệ Admin</span>
+        </div>
+
+        <!-- Footer / Input Form -->
+        <div class="chatbot-footer">
+            <input type="text" class="form-control chatbot-input" id="chatbotInput" placeholder="Nhập câu hỏi tại đây..." autocomplete="off" />
+            <button class="chatbot-send-btn" id="chatbotSend" title="Gửi">
+                <i class="bi bi-send-fill"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const btn = document.getElementById("chatbotBtn");
+    const win = document.getElementById("chatbotWindow");
+    const closeBtn = document.getElementById("chatbotClose");
+    const pulse = document.getElementById("chatbotPulse");
+    const input = document.getElementById("chatbotInput");
+    const sendBtn = document.getElementById("chatbotSend");
+    const body = document.getElementById("chatbotBody");
+    const suggContainer = document.getElementById("chatbotSuggestions");
+
+    let hasOpened = false;
+
+    // Toggle Chatbox
+    btn.addEventListener("click", () => {
+        const isShow = win.classList.toggle("show");
+        btn.classList.toggle("active", isShow);
+        
+        if (isShow) {
+            // Remove notification pulse dot when opened
+            if (pulse) {
+                pulse.style.display = "none";
+            }
+            // Auto scroll to bottom
+            scrollToBottom();
+            // Focus input
+            setTimeout(() => input.focus(), 300);
+
+            if (!hasOpened) {
+                hasOpened = true;
+                // Add a dynamic greeting after 0.5s if empty
+                if (body.children.length <= 1) {
+                    showTyping();
+                    setTimeout(() => {
+                        hideTyping();
+                        appendMessage("bot", "<p>💡 Gợi ý: Bạn có thể gõ các từ khóa như: <em>'tìm tài liệu C#'</em>, <em>'quy chế kiểm duyệt'</em>, hoặc <em>'cách tải'</em> để mình hỗ trợ nhanh nhất nhé!</p>");
+                    }, 800);
+                }
+            }
+        }
+    });
+
+    closeBtn.addEventListener("click", () => {
+        win.classList.remove("show");
+        btn.classList.remove("active");
+    });
+
+    // Send on Enter
+    input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            handleSend();
+        }
+    });
+
+    sendBtn.addEventListener("click", handleSend);
+
+    async function handleSend() {
+        const text = input.value.trim();
+        if (!text) return;
+
+        // Clear input
+        input.value = "";
+
+        // Add user message
+        appendMessage("user", escapeHTML(text));
+        scrollToBottom();
+
+        // Show typing indicator
+        showTyping();
+
+        try {
+            // Fetch response from server
+            const res = await fetch("/Chatbot/Query", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ message: text })
+            });
+
+            if (!res.ok) throw new Error("Network response was not ok");
+            const data = await res.json();
+
+            // Hide typing
+            hideTyping();
+
+            // Append bot message
+            appendMessage("bot", data.response);
+            
+            // Render suggestions
+            renderSuggestions(data.suggestions);
+
+        } catch (err) {
+            console.error("Chatbot query error:", err);
+            hideTyping();
+            appendMessage("bot", "<p>⚠️ Xin lỗi, có lỗi kết nối xảy ra. Vui lòng thử lại sau.</p>");
+        }
+
+        scrollToBottom();
+    }
+
+    function appendMessage(sender, htmlContent) {
+        const msgDiv = document.createElement("div");
+        msgDiv.className = `chat-msg ${sender}`;
+        msgDiv.innerHTML = htmlContent;
+        body.appendChild(msgDiv);
+    }
+
+    function showTyping() {
+        // Check if typing indicator already exists
+        if (document.getElementById("chatTypingIndicator")) return;
+
+        const typingDiv = document.createElement("div");
+        typingDiv.className = "chat-msg bot";
+        typingDiv.id = "chatTypingIndicator";
+        typingDiv.innerHTML = `<div class="chatbot-typing"><span></span><span></span><span></span></div>`;
+        body.appendChild(typingDiv);
+        scrollToBottom();
+    }
+
+    function hideTyping() {
+        const typingDiv = document.getElementById("chatTypingIndicator");
+        if (typingDiv) {
+            typingDiv.remove();
+        }
+    }
+
+    function renderSuggestions(suggs) {
+        suggContainer.innerHTML = "";
+        if (!suggs || suggs.length === 0) return;
+
+        suggs.forEach(s => {
+            const span = document.createElement("span");
+            span.className = "chatbot-suggestion-chip";
+            span.textContent = s;
+            span.addEventListener("click", () => {
+                input.value = s;
+                handleSend();
+            });
+            suggContainer.appendChild(span);
+        });
+    }
+
+    window.sendSuggestion = function(text) {
+        input.value = text;
+        handleSend();
+    };
+
+    function scrollToBottom() {
+        body.scrollTo({
+            top: body.scrollHeight,
+            behavior: "smooth"
+        });
+    }
+
+    function escapeHTML(str) {
+        return str.replace(/[&<>'"]/g, 
+            tag => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            }[tag] || tag)
+        );
+    }
+});
+</script>
+
 @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
+

@@ -68,20 +68,41 @@ namespace Documentshare.Controllers
         }
 
         // Document details
-        public async Task<IActionResult> Details(int id)
+        public async Task<IActionResult> Details(int id, int? subId)
         {
             var doc = await _context.Documents
                 .Include(d => d.Category)
                 .Include(d => d.Comments)
+                .Include(d => d.SubDocuments)
                 .FirstOrDefaultAsync(d => d.Id == id);
 
             if (doc == null) return NotFound();
+
+            // If this is a child document, redirect to its parent page and play this child
+            if (doc.ParentId.HasValue)
+            {
+                return RedirectToAction(nameof(Details), new { id = doc.ParentId.Value, subId = doc.Id });
+            }
 
             // Only increment view for approved docs
             if (doc.IsApproved)
             {
                 doc.ViewCount++;
                 await _context.SaveChangesAsync();
+            }
+
+            // Order subdocuments chronologically (by upload date)
+            if (doc.SubDocuments != null && doc.SubDocuments.Count > 0)
+            {
+                doc.SubDocuments = doc.SubDocuments.OrderBy(d => d.UploadDate).ToList();
+                
+                // If a subId is specified, make sure it belongs to this parent
+                var activeSub = doc.SubDocuments.FirstOrDefault(s => s.Id == subId);
+                if (activeSub == null)
+                {
+                    activeSub = doc.SubDocuments.First();
+                }
+                ViewBag.ActiveSubDocument = activeSub;
             }
 
             doc.Comments = doc.Comments.OrderByDescending(c => c.CreatedDate).ToList();
@@ -164,6 +185,113 @@ namespace Documentshare.Controllers
             return null;
         }
 
+        private string? ExtractGoogleDriveFolderId(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url)) return null;
+            url = url.Trim();
+
+            if (url.Contains("/folders/"))
+            {
+                try
+                {
+                    var startIndex = url.IndexOf("/folders/") + "/folders/".Length;
+                    var endIndex = url.IndexOf("/", startIndex);
+                    if (endIndex == -1) endIndex = url.IndexOf("?", startIndex);
+                    if (endIndex == -1) endIndex = url.Length;
+                    return url.Substring(startIndex, endIndex - startIndex);
+                }
+                catch { }
+            }
+
+            if (url.Contains("id=") && (url.Contains("folder") || url.Contains("open")))
+            {
+                try
+                {
+                    var match = System.Text.RegularExpressions.Regex.Match(url, @"[?&]id=([^&]+)");
+                    if (match.Success)
+                    {
+                        return match.Groups[1].Value;
+                    }
+                }
+                catch { }
+            }
+
+            return null;
+        }
+
+        private async Task<List<(string Id, string Title, string PreviewUrl)>> FetchGoogleDriveFolderFiles(string folderId, string? resourceKey)
+        {
+            var files = new List<(string Id, string Title, string PreviewUrl)>();
+            var url = $"https://drive.google.com/embeddedfolderview?id={folderId}";
+            if (!string.IsNullOrEmpty(resourceKey))
+            {
+                url += $"&resourcekey={resourceKey}";
+            }
+
+            using (var client = new System.Net.Http.HttpClient())
+            {
+                client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+                try
+                {
+                    var html = await client.GetStringAsync(url);
+                    
+                    var entryRegex = new System.Text.RegularExpressions.Regex(
+                        @"class=""flip-entry""[^>]*id=""entry-(?<id>[a-zA-Z0-9_-]+)"".*?<a[^>]*href=""(?<href>[^""]+)""[^>]*>.*?class=""flip-entry-title""[^>]*>(?<title>[^<]+)</div>",
+                        System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Singleline);
+                        
+                    var matches = entryRegex.Matches(html);
+                    foreach (System.Text.RegularExpressions.Match m in matches)
+                    {
+                        var fileId = m.Groups["id"].Value;
+                        var rawHref = m.Groups["href"].Value;
+                        var rawTitle = m.Groups["title"].Value;
+
+                        var href = System.Net.WebUtility.HtmlDecode(rawHref);
+                        var cleanTitle = System.Net.WebUtility.HtmlDecode(rawTitle);
+
+                        // Clean title from "Shared", "Video", etc. suffix
+                        cleanTitle = System.Text.RegularExpressions.Regex.Replace(cleanTitle, @"\s+(Video|Shared|Document|PDF|Folder|Image|Audio|Archive)(\s+Shared)*$", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                        cleanTitle = System.Text.RegularExpressions.Regex.Replace(cleanTitle, @"\s+Shared$", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+                        // Extract resourcekey from file link
+                        var fileResourceKey = "";
+                        var fileResMatch = System.Text.RegularExpressions.Regex.Match(href, @"[?&]resourcekey=([^&]+)");
+                        if (fileResMatch.Success)
+                        {
+                            fileResourceKey = fileResMatch.Groups[1].Value;
+                        }
+
+                        var previewUrl = $"https://drive.google.com/file/d/{fileId}/preview";
+                        if (!string.IsNullOrEmpty(fileResourceKey))
+                        {
+                            previewUrl += $"?resourcekey={fileResourceKey}";
+                        }
+
+                        if (!files.Any(f => f.Id == fileId))
+                        {
+                            files.Add((fileId, cleanTitle, previewUrl));
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Lỗi khi cào thư mục Google Drive: {ex.Message}");
+                }
+            }
+            
+            return files;
+        }
+
+        private static int ExtractLessonNumber(string title)
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(title, @"(?:Bài|Bai|Lesson|Lesson\s+)\s*(?<num>\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (match.Success && int.TryParse(match.Groups["num"].Value, out var num))
+            {
+                return num;
+            }
+            return 999999;
+        }
+
         // Upload form (POST)
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -175,13 +303,33 @@ namespace Documentshare.Controllers
             ModelState.Remove(nameof(model.FileExtension));
             ModelState.Remove(nameof(model.FileSize));
 
+            bool isFolderImport = false;
+            string? folderId = null;
+            string? folderResourceKey = null;
+
+            if (uploadType == "link" && !string.IsNullOrWhiteSpace(driveLink))
+            {
+                folderId = ExtractGoogleDriveFolderId(driveLink);
+                if (folderId != null)
+                {
+                    isFolderImport = true;
+
+                    // Extract resourcekey from the driveLink
+                    var resKeyMatch = System.Text.RegularExpressions.Regex.Match(driveLink, @"[?&]resourcekey=([^&]+)");
+                    if (resKeyMatch.Success)
+                    {
+                        folderResourceKey = resKeyMatch.Groups[1].Value;
+                    }
+                }
+            }
+
             if (uploadType == "link")
             {
                 if (string.IsNullOrWhiteSpace(driveLink))
                 {
-                    ModelState.AddModelError("driveLink", "Vui lòng nhập đường dẫn video Google Drive.");
+                    ModelState.AddModelError("driveLink", "Vui lòng nhập đường dẫn video hoặc thư mục Google Drive.");
                 }
-                else
+                else if (!isFolderImport)
                 {
                     var embedUrl = ConvertGoogleDriveLinkToEmbed(driveLink);
                     if (string.IsNullOrEmpty(embedUrl))
@@ -208,6 +356,78 @@ namespace Documentshare.Controllers
 
             try
             {
+                if (isFolderImport && folderId != null)
+                {
+                    // 1. Create Parent Document first
+                    var parentDoc = new Document
+                    {
+                        Title = model.Title,
+                        Description = model.Description ?? $"Thư mục tài liệu liên kết từ Google Drive: {model.Title}.",
+                        CategoryId = model.CategoryId,
+                        Level = model.Level,
+                        Author = string.IsNullOrWhiteSpace(model.Author) ? "Ẩn danh" : model.Author.Trim(),
+                        Language = model.Language,
+                        Source = string.IsNullOrWhiteSpace(model.Source) ? "" : model.Source.Trim(),
+                        Tags = string.IsNullOrWhiteSpace(model.Tags) ? "" : model.Tags.Trim(),
+                        FilePath = driveLink,
+                        OriginalFileName = "Google Drive Folder",
+                        FileExtension = ".folder",
+                        FileSize = 0,
+                        UploadDate = DateTime.Now,
+                        IsApproved = false
+                    };
+                    _context.Add(parentDoc);
+                    await _context.SaveChangesAsync(); // Generates parentDoc.Id
+
+                    // 2. Fetch files from folder using embeddedfolderview
+                    var files = await FetchGoogleDriveFolderFiles(folderId, folderResourceKey);
+                    if (files.Count == 0)
+                    {
+                        // Clean up parent doc if empty
+                        _context.Remove(parentDoc);
+                        await _context.SaveChangesAsync();
+
+                        ModelState.AddModelError("driveLink", "Không tìm thấy tệp nào trong thư mục Google Drive này hoặc thư mục không công khai.");
+                        ViewBag.Categories = await _context.Categories.OrderBy(c => c.Name).ToListAsync();
+                        ViewBag.UploadType = uploadType;
+                        ViewBag.DriveLink = driveLink;
+                        return View(model);
+                    }
+
+                    // Sort naturally based on lesson number
+                    files = files.OrderBy(f => ExtractLessonNumber(f.Title)).ThenBy(f => f.Title).ToList();
+
+                    var now = DateTime.Now;
+                    int seq = 0;
+                    foreach (var fileInfo in files)
+                    {
+                        var childDoc = new Document
+                        {
+                            Title = fileInfo.Title,
+                            Description = $"Mục thứ {seq + 1} trong thư mục Google Drive: {fileInfo.Title}.",
+                            CategoryId = model.CategoryId,
+                            Level = model.Level,
+                            Author = parentDoc.Author,
+                            Language = model.Language,
+                            Source = parentDoc.Source,
+                            Tags = parentDoc.Tags,
+                            FilePath = fileInfo.PreviewUrl,
+                            OriginalFileName = "Google Drive Video",
+                            FileExtension = ".gdrive",
+                            FileSize = 0,
+                            UploadDate = now.AddSeconds(seq + 1),
+                            IsApproved = false,
+                            ParentId = parentDoc.Id // Link to parent
+                        };
+                        _context.Add(childDoc);
+                        seq++;
+                    }
+
+                    await _context.SaveChangesAsync();
+                    TempData["SuccessMessage"] = $"Đã tự động thêm {seq} bài học từ thư mục Google Drive vào hệ thống. Đang chờ Admin phê duyệt.";
+                    return RedirectToAction("Index", "Home");
+                }
+
                 var uploadsDir = Path.Combine(_env.WebRootPath, "uploads");
                 Directory.CreateDirectory(uploadsDir);
 

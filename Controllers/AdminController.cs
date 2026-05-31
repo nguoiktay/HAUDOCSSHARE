@@ -37,9 +37,9 @@ namespace Documentshare.Controllers
         {
             if (!IsAdmin()) return RedirectIfNotAdmin();
 
-            var pending        = await _ctx.Documents.Include(d => d.Category).Where(d => !d.IsApproved).OrderByDescending(d => d.UploadDate).ToListAsync();
-            var totalDocs      = await _ctx.Documents.CountAsync();
-            var totalApproved  = await _ctx.Documents.CountAsync(d => d.IsApproved);
+            var pending        = await _ctx.Documents.Include(d => d.Category).Where(d => !d.IsApproved && d.ParentId == null).OrderByDescending(d => d.UploadDate).ToListAsync();
+            var totalDocs      = await _ctx.Documents.CountAsync(d => d.ParentId == null);
+            var totalApproved  = await _ctx.Documents.CountAsync(d => d.IsApproved && d.ParentId == null);
             var totalUsers     = await _ctx.Users.CountAsync();
             var totalAdmins    = await _ctx.Users.CountAsync(u => u.Role == "Admin");
             var totalDownloads = await _ctx.Documents.SumAsync(d => (int?)d.DownloadCount) ?? 0;
@@ -60,9 +60,18 @@ namespace Documentshare.Controllers
         public async Task<IActionResult> Approve(int id)
         {
             if (!IsAdmin()) return Unauthorized();
-            var doc = await _ctx.Documents.FindAsync(id);
+            var doc = await _ctx.Documents.Include(d => d.SubDocuments).FirstOrDefaultAsync(d => d.Id == id);
             if (doc == null) return NotFound();
+            
             doc.IsApproved = true;
+            if (doc.SubDocuments != null)
+            {
+                foreach (var sub in doc.SubDocuments)
+                {
+                    sub.IsApproved = true;
+                }
+            }
+            
             await _ctx.SaveChangesAsync();
             TempData["SuccessMessage"] = $"Đã phê duyệt tài liệu «{doc.Title}».";
             return RedirectToAction(nameof(Index));
@@ -72,12 +81,16 @@ namespace Documentshare.Controllers
         public async Task<IActionResult> Reject(int id)
         {
             if (!IsAdmin()) return Unauthorized();
-            var doc = await _ctx.Documents.FindAsync(id);
+            var doc = await _ctx.Documents.Include(d => d.SubDocuments).FirstOrDefaultAsync(d => d.Id == id);
             if (doc == null) return NotFound();
             try
             {
-                var fp = Path.Combine(_env.WebRootPath, doc.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-                if (System.IO.File.Exists(fp)) System.IO.File.Delete(fp);
+                if (!string.IsNullOrEmpty(doc.FilePath) && !doc.FilePath.StartsWith("http"))
+                {
+                    var fp = Path.Combine(_env.WebRootPath, doc.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                    if (System.IO.File.Exists(fp)) System.IO.File.Delete(fp);
+                }
+                
                 _ctx.Documents.Remove(doc);
                 await _ctx.SaveChangesAsync();
                 TempData["SuccessMessage"] = $"Đã từ chối và xóa tài liệu «{doc.Title}».";
@@ -150,6 +163,7 @@ namespace Documentshare.Controllers
             if (!IsAdmin()) return RedirectIfNotAdmin();
             var docs = await _ctx.Documents
                 .Include(d => d.Category)
+                .Where(d => d.ParentId == null)
                 .OrderByDescending(d => d.UploadDate)
                 .ToListAsync();
             return View(docs);
@@ -159,12 +173,16 @@ namespace Documentshare.Controllers
         public async Task<IActionResult> DeleteDocument(int id)
         {
             if (!IsAdmin()) return Unauthorized();
-            var doc = await _ctx.Documents.FindAsync(id);
+            var doc = await _ctx.Documents.Include(d => d.SubDocuments).FirstOrDefaultAsync(d => d.Id == id);
             if (doc == null) return NotFound();
             try
             {
-                var fp = Path.Combine(_env.WebRootPath, doc.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-                if (System.IO.File.Exists(fp)) System.IO.File.Delete(fp);
+                if (!string.IsNullOrEmpty(doc.FilePath) && !doc.FilePath.StartsWith("http"))
+                {
+                    var fp = Path.Combine(_env.WebRootPath, doc.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                    if (System.IO.File.Exists(fp)) System.IO.File.Delete(fp);
+                }
+                
                 _ctx.Documents.Remove(doc);
                 await _ctx.SaveChangesAsync();
                 TempData["SuccessMessage"] = $"Đã xóa tài liệu «{doc.Title}».";
