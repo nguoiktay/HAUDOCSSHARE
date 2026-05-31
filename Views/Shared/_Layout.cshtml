@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="DocShare - Nền tảng chia sẻ tài liệu học tập, nghiên cứu và chuyên môn cho mọi lĩnh vực." />
+    <title>@ViewData["Title"] - DocShare</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <script>
+        (function () {
+            const theme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+</head>
+@{
+    var userRole        = Context.Session.GetString("UserRole") ?? "";
+    var userDisplayName = Context.Session.GetString("UserDisplayName") ?? "";
+    var userName        = Context.Session.GetString("UserName") ?? "";
+    var isLoggedIn      = !string.IsNullOrEmpty(userName);
+    var isAdmin         = userRole == "Admin";
+}
+<body>
+<div class="glow-blob blob-1"></div>
+<div class="glow-blob blob-2"></div>
+<div class="glow-blob blob-3"></div>
+
+<header>
+    <nav class="navbar navbar-expand-lg navbar-glass fixed-top">
+        <div class="container">
+            <a class="navbar-brand" asp-controller="Home" asp-action="Index">
+                <i class="bi bi-journal-bookmark-fill"></i> DocShare
+            </a>
+
+            <button class="navbar-toggler border-0 text-white" type="button" data-bs-toggle="collapse" data-bs-target="#navMain" aria-label="Toggle navigation">
+                <i class="bi bi-list fs-4"></i>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navMain">
+                <ul class="navbar-nav me-auto gap-1 ps-2 ps-lg-3">
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString()=="Home"?"active":"")"
+                           asp-controller="Home" asp-action="Index">
+                            <i class="bi bi-house-door me-1"></i>Trang chủ
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString()=="Document" && ViewContext.RouteData.Values["action"]?.ToString()=="Browse"?"active":"")"
+                           asp-controller="Document" asp-action="Browse">
+                            <i class="bi bi-grid me-1"></i>Danh sách
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString()=="Document" && ViewContext.RouteData.Values["action"]?.ToString()=="Upload"?"active":"")"
+                           asp-controller="Document" asp-action="Upload">
+                            <i class="bi bi-cloud-upload me-1"></i>Đăng tải
+                        </a>
+                    </li>
+                    @if (isAdmin)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link text-danger @(ViewContext.RouteData.Values["controller"]?.ToString()=="Admin"?"active":"")"
+                               asp-controller="Admin" asp-action="Index">
+                                <i class="bi bi-shield-check me-1"></i>Quản trị
+                            </a>
+                        </li>
+                    }
+                </ul>
+
+                <div class="d-flex align-items-center gap-2">
+                    <!-- Light/Dark Mode Toggle -->
+                    <button id="themeToggle" class="btn-theme-toggle me-1" type="button" aria-label="Toggle Theme" title="Đổi giao diện Sáng/Tối">
+                        <i class="bi bi-suntheme theme-icon"></i>
+                    </button>
+
+                    @if (TempData["SuccessMessage"] != null)
+                    {
+                        <small class="text-success d-none d-lg-inline me-2">
+                            <i class="bi bi-check-circle-fill me-1"></i>@TempData["SuccessMessage"]
+                        </small>
+                    }
+
+                    @if (isLoggedIn)
+                    {
+                        <!-- User dropdown -->
+                        <div class="dropdown">
+                            <button class="btn d-flex align-items-center gap-2 px-3 py-1"
+                                    style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:var(--text-primary);font-size:.875rem;"
+                                    type="button" data-bs-toggle="dropdown">
+                                <span style="width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,@(isAdmin?"#ef4444,#f97316":"#6366f1,#22d3ee"));display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:.8rem;color:white;flex-shrink:0;">
+                                    @(userDisplayName.Length > 0 ? userDisplayName[0].ToString().ToUpper() : "?")
+                                </span>
+                                <span class="d-none d-sm-inline">@userDisplayName</span>
+                                @if (isAdmin)
+                                {
+                                    <span style="background:rgba(239,68,68,0.2);color:#fb7185;border-radius:999px;padding:.05rem .45rem;font-size:.65rem;font-weight:700;">Admin</span>
+                                }
+                                <i class="bi bi-chevron-down" style="font-size:.7rem;color:var(--text-secondary);"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end"
+                                style="background:var(--bg-surface);border:1px solid var(--card-border);border-radius:12px;min-width:180px;padding:.5rem;">
+                                <li>
+                                    <span class="dropdown-item-text" style="color:var(--text-muted);font-size:.75rem;padding:.25rem .75rem;">
+                                        @@@userName
+                                    </span>
+                                </li>
+                                <li><hr style="border-color:var(--card-border);margin:.25rem 0;"></li>
+                                @if (isAdmin)
+                                {
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Admin" asp-action="Index"
+                                           style="color:var(--danger);border-radius:8px;font-size:.875rem;">
+                                            <i class="bi bi-shield-check me-2"></i>Admin Panel
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Admin" asp-action="Users"
+                                           style="color:var(--text-primary);border-radius:8px;font-size:.875rem;">
+                                            <i class="bi bi-people me-2"></i>Quản lý User
+                                        </a>
+                                    </li>
+                                    <li><hr style="border-color:var(--card-border);margin:.25rem 0;"></li>
+                                }
+                                <li>
+                                    <form asp-controller="Account" asp-action="Logout" method="post" style="margin:0">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="dropdown-item text-danger"
+                                                style="border-radius:8px;font-size:.875rem;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:.375rem .75rem;">
+                                            <i class="bi bi-box-arrow-right me-2"></i>Đăng xuất
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    }
+                    else
+                    {
+                        <a asp-controller="Account" asp-action="Login"
+                           style="background:rgba(255,255,255,0.06);border:1px solid var(--card-border);border-radius:10px;color:var(--text-primary);font-size:.875rem;padding:.375rem .875rem;text-decoration:none;transition:all .2s;"
+                           onmouseover="this.style.background='rgba(99,102,241,0.15)'"
+                           onmouseout="this.style.background='rgba(255,255,255,0.06)'">
+                            <i class="bi bi-box-arrow-in-right me-1"></i>Đăng nhập
+                        </a>
+                        <a asp-controller="Account" asp-action="Register"
+                           style="background:linear-gradient(135deg,#6366f1,#4f46e5);border-radius:10px;color:white;font-size:.875rem;font-weight:600;padding:.375rem .875rem;text-decoration:none;transition:all .2s;box-shadow:0 2px 8px rgba(99,102,241,0.35);"
+                           onmouseover="this.style.transform='translateY(-1px)'"
+                           onmouseout="this.style.transform='none'">
+                            <i class="bi bi-person-plus me-1"></i>Đăng ký
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+    </nav>
+</header>
+
+<div style="padding-top: 85px; flex: 1;">
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="container mt-3">
+            <div class="alert-success-custom d-flex align-items-center gap-2">
+                <i class="bi bi-check-circle-fill flex-shrink-0"></i>
+                <span>@TempData["SuccessMessage"]</span>
+            </div>
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="container mt-3">
+            <div class="alert-danger-custom d-flex align-items-center gap-2">
+                <i class="bi bi-x-circle-fill flex-shrink-0"></i>
+                <span>@TempData["ErrorMessage"]</span>
+            </div>
+        </div>
+    }
+
+    <main>
+        @RenderBody()
+    </main>
+</div>
+
+<footer class="site-footer">
+    <div class="container">
+        <div class="row align-items-center g-3">
+            <div class="col-md-6">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span style="font-weight:800;font-size:1.1rem;background:linear-gradient(135deg,#818cf8,#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">
+                        <i class="bi bi-journal-bookmark-fill"></i> DocShare
+                    </span>
+                </div>
+                <p class="mb-0" style="color:var(--text-secondary);">Nền tảng chia sẻ tài liệu học tập, nghiên cứu &amp; chuyên môn cho mọi lĩnh vực.</p>
+            </div>
+            <div class="col-md-6 text-md-end">
+                <p class="mb-0" style="color:var(--text-muted);">
+                    Xây dựng bằng <strong>ASP.NET Core 10</strong> &amp; <strong>SQLite</strong>
+                    &nbsp;·&nbsp; &copy; 2026 DocShare
+                </p>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="~/js/site.js" asp-append-version="true"></script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

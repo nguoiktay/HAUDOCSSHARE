@@ -1,0 +1,238 @@
+@model Documentshare.Models.RegisterViewModel
+@{
+    ViewData["Title"] = "Đăng ký tài khoản - DocShare";
+    Layout = "_Layout";
+}
+
+<style>
+    .auth-wrapper {
+        min-height: calc(100vh - 70px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1rem;
+        background: radial-gradient(ellipse at 20% 50%, rgba(99,102,241,0.08) 0%, transparent 60%),
+                    radial-gradient(ellipse at 80% 20%, rgba(34,211,238,0.06) 0%, transparent 50%);
+    }
+    .auth-card {
+        width: 100%;
+        max-width: 480px;
+        background: rgba(15,23,42,0.85);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 20px;
+        padding: 2.5rem;
+        box-shadow: 0 25px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03);
+        backdrop-filter: blur(20px);
+    }
+    .auth-logo {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    .auth-logo .logo-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, #6366f1, #22d3ee);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.75rem;
+        color: white;
+        margin-bottom: 1rem;
+        box-shadow: 0 8px 20px rgba(99,102,241,0.4);
+    }
+    .auth-title { font-size: 1.5rem; font-weight: 800; color: #f1f5f9; margin-bottom: .25rem; }
+    .auth-sub   { color: #64748b; font-size: .875rem; }
+
+    .form-label-custom {
+        color: #94a3b8;
+        font-size: .8125rem;
+        font-weight: 600;
+        letter-spacing: .04em;
+        margin-bottom: .4rem;
+    }
+    .form-control-custom {
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 10px;
+        color: #f1f5f9;
+        padding: .75rem 1rem;
+        font-size: .9375rem;
+        transition: all .2s;
+        width: 100%;
+    }
+    .form-control-custom:focus {
+        outline: none;
+        border-color: rgba(99,102,241,0.6);
+        background: rgba(99,102,241,0.05);
+        box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+        color: #f1f5f9;
+    }
+    .form-control-custom::placeholder { color: #475569; }
+    .input-icon-wrap { position: relative; }
+    .input-icon-wrap .input-icon {
+        position: absolute; left: .875rem; top: 50%; transform: translateY(-50%);
+        color: #475569; font-size: 1rem; pointer-events: none;
+    }
+    .input-icon-wrap .form-control-custom { padding-left: 2.5rem; }
+
+    .btn-auth {
+        width: 100%;
+        padding: .875rem;
+        border-radius: 12px;
+        border: none;
+        background: linear-gradient(135deg, #6366f1, #4f46e5);
+        color: white;
+        font-weight: 700;
+        font-size: 1rem;
+        letter-spacing: .02em;
+        cursor: pointer;
+        transition: all .25s;
+        box-shadow: 0 4px 15px rgba(99,102,241,0.4);
+    }
+    .btn-auth:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(99,102,241,0.5);
+        background: linear-gradient(135deg, #7c7ff1, #6366f1);
+    }
+    .btn-auth:active { transform: translateY(0); }
+
+    .auth-divider { text-align: center; color: #334155; font-size: .8125rem; margin: 1.25rem 0; position: relative; }
+    .auth-divider::before, .auth-divider::after {
+        content: ''; position: absolute; top: 50%; height: 1px;
+        background: rgba(255,255,255,0.07); width: calc(50% - 40px);
+    }
+    .auth-divider::before { left: 0; }
+    .auth-divider::after  { right: 0; }
+
+    .auth-link-row { text-align: center; color: #64748b; font-size: .875rem; }
+    .auth-link-row a { color: #818cf8; font-weight: 600; text-decoration: none; }
+    .auth-link-row a:hover { color: #a5b4fc; }
+
+    .field-error { color: #fb7185; font-size: .775rem; margin-top: .25rem; }
+
+    .password-strength {
+        height: 3px; border-radius: 2px; margin-top: .4rem;
+        background: rgba(255,255,255,0.06);
+        overflow: hidden;
+    }
+    .strength-bar {
+        height: 100%; width: 0%; border-radius: 2px;
+        transition: width .3s, background .3s;
+    }
+    .strength-text { font-size: .72rem; color: #64748b; margin-top: .3rem; }
+</style>
+
+<div class="auth-wrapper">
+    <div class="auth-card">
+        <div class="auth-logo">
+            <div class="logo-icon"><i class="bi bi-journal-bookmark-fill"></i></div>
+            <div class="auth-title">Tạo tài khoản mới</div>
+            <div class="auth-sub">Tham gia cộng đồng DocShare ngay hôm nay</div>
+        </div>
+
+        @if (!ViewData.ModelState.IsValid && ViewData.ModelState.ErrorCount > 0)
+        {
+            foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+            {
+                <div class="field-error mb-2"><i class="bi bi-exclamation-circle me-1"></i>@err.ErrorMessage</div>
+            }
+        }
+
+        <form asp-action="Register" method="post" id="registerForm">
+            @Html.AntiForgeryToken()
+
+            <div class="mb-3">
+                <label class="form-label-custom">TÊN ĐĂNG NHẬP</label>
+                <div class="input-icon-wrap">
+                    <i class="bi bi-person input-icon"></i>
+                    <input asp-for="Username" id="reg-username"
+                           class="form-control-custom"
+                           placeholder="vd: nguyen_van_a"
+                           autocomplete="username" />
+                </div>
+                <span asp-validation-for="Username" class="field-error"></span>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label-custom">TÊN HIỂN THỊ</label>
+                <div class="input-icon-wrap">
+                    <i class="bi bi-badge-cc input-icon"></i>
+                    <input asp-for="DisplayName" id="reg-displayname"
+                           class="form-control-custom"
+                           placeholder="vd: Nguyễn Văn A" />
+                </div>
+                <span asp-validation-for="DisplayName" class="field-error"></span>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label-custom">ĐỊA CHỈ EMAIL</label>
+                <div class="input-icon-wrap">
+                    <i class="bi bi-envelope input-icon"></i>
+                    <input asp-for="Email" id="reg-email"
+                           class="form-control-custom"
+                           placeholder="vd: email@gmail.com"
+                           autocomplete="email" />
+                </div>
+                <span asp-validation-for="Email" class="field-error"></span>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label-custom">MẬT KHẨU</label>
+                <div class="input-icon-wrap">
+                    <i class="bi bi-lock input-icon"></i>
+                    <input asp-for="Password" id="reg-password"
+                           class="form-control-custom"
+                           placeholder="Ít nhất 6 ký tự"
+                           autocomplete="new-password" />
+                </div>
+                <div class="password-strength"><div class="strength-bar" id="strengthBar"></div></div>
+                <div class="strength-text" id="strengthText"></div>
+                <span asp-validation-for="Password" class="field-error"></span>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label-custom">XÁC NHẬN MẬT KHẨU</label>
+                <div class="input-icon-wrap">
+                    <i class="bi bi-lock-fill input-icon"></i>
+                    <input asp-for="ConfirmPassword" id="reg-confirm"
+                           class="form-control-custom"
+                           placeholder="Nhập lại mật khẩu"
+                           autocomplete="new-password" />
+                </div>
+                <span asp-validation-for="ConfirmPassword" class="field-error"></span>
+            </div>
+
+            <button type="submit" class="btn-auth">
+                <i class="bi bi-person-plus me-2"></i>Tạo tài khoản
+            </button>
+        </form>
+
+        <div class="auth-divider">hoặc</div>
+        <div class="auth-link-row">
+            Đã có tài khoản? <a asp-controller="Account" asp-action="Login">Đăng nhập ngay</a>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    const pw = document.getElementById('reg-password');
+    const bar = document.getElementById('strengthBar');
+    const txt = document.getElementById('strengthText');
+    pw?.addEventListener('input', () => {
+        const v = pw.value;
+        let score = 0;
+        if (v.length >= 6) score++;
+        if (v.length >= 10) score++;
+        if (/[A-Z]/.test(v)) score++;
+        if (/[0-9]/.test(v)) score++;
+        if (/[^A-Za-z0-9]/.test(v)) score++;
+        const pct = (score / 5) * 100;
+        bar.style.width = pct + '%';
+        if (score <= 1) { bar.style.background = '#ef4444'; txt.textContent = 'Yếu'; txt.style.color='#ef4444'; }
+        else if (score <= 3) { bar.style.background = '#f59e0b'; txt.textContent = 'Trung bình'; txt.style.color='#f59e0b'; }
+        else { bar.style.background = '#10b981'; txt.textContent = 'Mạnh'; txt.style.color='#10b981'; }
+    });
+</script>
+}

@@ -1,0 +1,131 @@
+@{
+    ViewData["Title"] = "Tất cả tài liệu - DocShare";
+    var docs  = ViewBag.Documents as List<Documentshare.Models.Document> ?? new();
+    var cats  = ViewBag.Categories as List<Documentshare.Models.Category> ?? new();
+    string q  = ViewBag.Q ?? "";
+    int? catId= ViewBag.CategoryId;
+    string lv = ViewBag.Level ?? "";
+    string ext= ViewBag.Ext ?? "";
+    string sort=ViewBag.Sort ?? "newest";
+}
+
+@functions {
+    static string Ex(string e)=>(e??"").ToLower().TrimStart('.');
+    static string FB(string e)=>Ex(e) switch{"pdf"=>"badge-pdf","doc" or "docx"=>"badge-doc","xls" or "xlsx"=>"badge-xls","zip" or "rar"=>"badge-zip","png" or "jpg" or "jpeg"=>"badge-img","ppt" or "pptx"=>"badge-ppt","txt"=>"badge-txt","mp4" or "webm" or "ogg" or "gdrive" or "link"=>"badge-video",_=>"badge-other"};
+}
+
+<div class="container py-4">
+    <div class="row g-4">
+
+        <!-- Sidebar Filters -->
+        <div class="col-lg-3">
+            <div class="glass-card position-sticky" style="top:90px;">
+                <h5 class="fw-bold mb-3"><i class="bi bi-funnel-fill me-1" style="color:var(--primary);"></i>Bộ lọc</h5>
+                <form asp-action="Browse" method="get" id="filterForm">
+                    <div class="mb-3">
+                        <label class="form-label text-muted" style="font-size:.75rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;">Tìm kiếm</label>
+                        <input type="text" name="q" value="@q" class="form-control form-control-premium" placeholder="Từ khóa..." />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted" style="font-size:.75rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;">Lĩnh vực</label>
+                        @foreach (var c in cats)
+                        {
+                            <div class="form-check mb-1">
+                                <input class="form-check-input" type="radio" name="categoryId" id="cat@c.Id" value="@c.Id"
+                                       @(catId==c.Id?"checked":null) onchange="document.getElementById('filterForm').submit()" />
+                                <label class="form-check-label text-secondary" for="cat@c.Id" style="font-size:.8125rem;cursor:pointer;">@c.Name</label>
+                            </div>
+                        }
+                        @if (catId.HasValue)
+                        {
+                            <div>
+                                <a asp-action="Browse" class="text-muted text-decoration-none" style="font-size:.75rem;"><i class="bi bi-x me-1"></i>Bỏ chọn</a>
+                            </div>
+                        }
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted" style="font-size:.75rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;">Cấp độ</label>
+                        <select name="level" class="form-select form-select-premium" onchange="this.form.submit()">
+                            <option value="">Tất cả</option>
+                            @foreach (var l in new[]{"Cơ bản","Trung cấp","Nâng cao","Chuyên sâu","Tất cả cấp độ"})
+                            {
+                                <option value="@l" selected="@(lv==l?"selected":null)">@l</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted" style="font-size:.75rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;">Định dạng</label>
+                        <select name="ext" class="form-select form-select-premium" onchange="this.form.submit()">
+                            <option value="">Tất cả</option>
+                            @foreach(var(lb,vl) in new[]{("PDF",".pdf"),("Word",".docx"),("Excel",".xlsx"),("PowerPoint",".pptx"),("Zip/Rar",".zip"),("Ảnh",".png"),("Văn bản",".txt"),("Video",".mp4"),("Link Drive",".gdrive")})
+                            {<option value="@vl" selected="@(ext==vl?"selected":null)">@lb</option>}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-premium w-100"><i class="bi bi-search me-1"></i>Tìm kiếm</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-lg-9">
+            <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                <h2 class="section-title">Danh sách tài liệu <span class="text-muted fw-normal" style="font-size:.85rem;">(@docs.Count)</span></h2>
+                <select name="sort" class="form-select form-select-premium w-auto" onchange="window.location='?sort='+this.value+'@(catId.HasValue?"&categoryId="+catId:"")'">
+                    <option value="newest"    selected="@(sort=="newest"   ?"selected":null)">Mới nhất</option>
+                    <option value="downloads" selected="@(sort=="downloads"?"selected":null)">Tải nhiều nhất</option>
+                    <option value="views"     selected="@(sort=="views"    ?"selected":null)">Xem nhiều nhất</option>
+                    <option value="oldest"    selected="@(sort=="oldest"   ?"selected":null)">Cũ nhất</option>
+                </select>
+            </div>
+
+            @if (!docs.Any())
+            {
+                <div class="glass-card empty-state">
+                    <div class="empty-state-icon"><i class="bi bi-search"></i></div>
+                    <h4 class="fw-bold mb-2">Không tìm thấy kết quả</h4>
+                    <p class="text-muted mb-3">Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm.</p>
+                    <a asp-action="Browse" class="btn btn-premium-outline"><i class="bi bi-arrow-left me-1"></i>Xem tất cả</a>
+                </div>
+            }
+            else
+            {
+                <div class="row g-3">
+                    @foreach (var doc in docs)
+                    {
+                        var avg = doc.Comments.Any() ? doc.Comments.Average(c=>c.Rating) : 0.0;
+                        var cnt = doc.Comments.Count;
+                        <div class="col-sm-6 col-xl-4">
+                            <div class="glass-card glass-card-hover doc-card p-3 h-100">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <span class="badge-file @FB(doc.FileExtension)">@Ex(doc.FileExtension)</span>
+                                    <span class="text-muted" style="font-size:.7rem;">@doc.UploadDate.ToString("dd/MM/yy")</span>
+                                </div>
+                                <div class="doc-card-body">
+                                    <a asp-controller="Document" asp-action="Details" asp-route-id="@doc.Id" class="doc-title">@doc.Title</a>
+                                    <p class="doc-description mb-2">@(string.IsNullOrEmpty(doc.Description)?"Chưa có mô tả.":doc.Description)</p>
+                                </div>
+                                <div class="doc-meta-row mb-2 mt-2">
+                                    <span class="doc-meta-item"><i class="bi bi-folder2 me-1" style="color:var(--primary-light);"></i><span style="font-size:.72rem;">@(doc.Category?.Name??"Khác")</span></span>
+                                    <span class="doc-meta-item"><i class="bi bi-bar-chart-steps me-1"></i><span style="font-size:.72rem;">@doc.Level</span></span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <span class="stars" style="font-size:.75rem;">
+                                        @{for(int i=1;i<=5;i++){<text>@(i<=Math.Round(avg)?"<i class=\"bi bi-star-fill\"></i>":"<i class=\"bi bi-star opacity-30\"></i>")</text>}}
+                                    </span>
+                                    <div class="d-flex gap-2 text-muted" style="font-size:.75rem;">
+                                        <span><i class="bi bi-eye"></i> @doc.ViewCount</span>
+                                        <span><i class="bi bi-download"></i> @doc.DownloadCount</span>
+                                    </div>
+                                </div>
+                                <div class="d-grid gap-1">
+                                    <a asp-controller="Document" asp-action="Download" asp-route-id="@doc.Id" class="btn btn-premium btn-sm"><i class="bi bi-download me-1"></i>Tải xuống</a>
+                                    <a asp-controller="Document" asp-action="Details"  asp-route-id="@doc.Id" class="btn btn-premium-outline btn-sm"><i class="bi bi-info-circle me-1"></i>Chi tiết</a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>

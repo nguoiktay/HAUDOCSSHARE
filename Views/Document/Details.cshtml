@@ -1,0 +1,291 @@
+@model Documentshare.Models.Document
+@{
+    ViewData["Title"] = Model.Title;
+    var role    = Context.Request.Cookies["DocumentShare_Role"] ?? "User";
+    var isAdmin = role == "Admin";
+    var avg     = Model.Comments.Any() ? Model.Comments.Average(c => c.Rating) : 0.0;
+    var cnt     = Model.Comments.Count;
+}
+
+@functions {
+    static string Ext(string e)   => (e??"").ToLower().TrimStart('.');
+    static string FileBadge(string e) => Ext(e) switch {
+        "pdf"=>"badge-pdf","doc" or "docx"=>"badge-doc","xls" or "xlsx"=>"badge-xls",
+        "zip" or "rar"=>"badge-zip","png" or "jpg" or "jpeg"=>"badge-img",
+        "ppt" or "pptx"=>"badge-ppt","txt"=>"badge-txt",
+        "mp4" or "webm" or "ogg" or "gdrive" or "link"=>"badge-video",
+        _=>"badge-other"};
+    static string FmtSize(long b) {
+        if(b==0)return"—";string[]s={"B","KB","MB","GB"};int i=0;double v=b;
+        while(v>=1024&&i<s.Length-1){v/=1024;i++;}return$"{v:0.#} {s[i]}";}
+    static string LevelCls(string lv) => lv switch {
+        "Cơ bản"=>"level-beginner","Trung cấp"=>"level-mid","Nâng cao"=>"level-advanced","Chuyên sâu"=>"level-expert",_=>"level-all"};
+}
+
+@if (!Model.IsApproved)
+{
+    <div class="container mt-4">
+        <div class="alert-warning-custom d-flex align-items-center gap-2 mb-4">
+            <i class="bi bi-hourglass-split fs-4 flex-shrink-0"></i>
+            <div>
+                <strong>Tài liệu đang chờ duyệt</strong> — Chưa hiển thị công khai cho thành viên.
+                @if (isAdmin)
+                {
+                    <span class="ms-3">
+                        <form asp-controller="Admin" asp-action="Approve" method="post" class="d-inline">
+                            <input type="hidden" name="id" value="@Model.Id" />
+                            <button class="btn btn-sm btn-success px-3 me-2"><i class="bi bi-check2-circle me-1"></i>Phê duyệt</button>
+                        </form>
+                        <form asp-controller="Admin" asp-action="Reject" method="post" class="d-inline">
+                            <input type="hidden" name="id" value="@Model.Id" />
+                            <button class="btn btn-sm btn-danger px-3" onclick="return confirm('Xóa vĩnh viễn tài liệu này?')"><i class="bi bi-trash me-1"></i>Từ chối</button>
+                        </form>
+                    </span>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+<div class="container py-4">
+    <div class="row g-4">
+
+        <!-- ===== LEFT: Preview + Comments ===== -->
+        <div class="col-lg-8">
+
+            <!-- Preview -->
+            <div class="glass-card mb-4">
+                <h5 class="fw-bold mb-3"><i class="bi bi-eye-fill me-2" style="color:var(--primary);"></i>Xem trước</h5>
+                @if (Ext(Model.FileExtension) == "pdf")
+                {
+                    <div class="preview-frame-wrap">
+                        <iframe src="@Model.FilePath#toolbar=0&navpanes=0" title="@Model.Title"></iframe>
+                    </div>
+                }
+                else if (new[]{"png","jpg","jpeg","gif","webp"}.Contains(Ext(Model.FileExtension)))
+                {
+                    <div class="text-center p-3 rounded" style="background:rgba(13,17,23,0.6);">
+                        <img src="@Model.FilePath" alt="@Model.Title" class="img-fluid rounded" style="max-height:500px;" />
+                    </div>
+                }
+                else if (new[]{"mp4","webm","ogg"}.Contains(Ext(Model.FileExtension)))
+                {
+                    <div class="text-center p-2 rounded" style="background:#000;">
+                        <video src="@Model.FilePath" controls class="w-100 rounded" style="max-height:500px; display:block;"></video>
+                    </div>
+                }
+                else if (Ext(Model.FileExtension) == "gdrive")
+                {
+                    <div class="preview-frame-wrap" style="aspect-ratio: 16/9; height: auto;">
+                        <iframe src="@Model.FilePath" title="@Model.Title" allow="autoplay; encrypted-media" allowfullscreen style="border:none; width:100%; height:100%; border-radius:12px;"></iframe>
+                    </div>
+                }
+                else
+                {
+                    <div class="preview-unavailable">
+                        <i class="bi bi-file-earmark-lock2 fs-1 text-muted opacity-40"></i>
+                        <div class="text-center">
+                            <p class="text-muted mb-2">Không hỗ trợ xem trước định dạng <strong>.@Ext(Model.FileExtension)</strong></p>
+                            <a asp-action="Download" asp-route-id="@Model.Id" class="btn btn-premium btn-sm">
+                                <i class="bi bi-download me-1"></i>Tải xuống để xem (@FmtSize(Model.FileSize))
+                            </a>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Comments -->
+            <div class="glass-card">
+                <h5 class="fw-bold mb-4"><i class="bi bi-chat-left-dots-fill me-2" style="color:var(--primary);"></i>Bình luận &amp; Đánh giá</h5>
+
+                @if (cnt > 0)
+                {
+                    <div class="d-flex align-items-center gap-4 mb-4 p-3 rounded" style="background:var(--bg-base); border: 1px solid var(--card-border);">
+                        <div class="text-center">
+                            <div style="font-size:3rem;font-weight:900;color:var(--warning);line-height:1;">@avg.ToString("0.0")</div>
+                            <div class="stars my-1">
+                                @for(int i=1;i<=5;i++){<text>@(i<=Math.Round(avg)?"<i class=\"bi bi-star-fill\"></i>":"<i class=\"bi bi-star opacity-30\"></i>")</text>}
+                            </div>
+                            <small class="text-muted">@cnt lượt đánh giá</small>
+                        </div>
+                    </div>
+                }
+
+                <!-- New comment form -->
+                <div class="mb-4 p-3 rounded" style="background:rgba(99,102,241,0.05);border:1px solid rgba(99,102,241,0.15);">
+                    <h6 class="fw-semibold mb-3">Viết đánh giá của bạn</h6>
+                    <form id="commentForm">
+                        <input type="hidden" name="documentId" value="@Model.Id" />
+                        <div class="row g-2 mb-2">
+                            <div class="col-sm-6">
+                                <input type="text" id="commentAuthor" name="author" class="form-control form-control-premium" placeholder="Tên của bạn" required />
+                            </div>
+                            <div class="col-sm-6 d-flex align-items-center gap-2">
+                                <span class="text-muted" style="font-size:.8rem;white-space:nowrap;">Đánh giá:</span>
+                                <div class="rating-picker">
+                                    <input type="radio" id="s5" name="rating" value="5" checked /><label for="s5"><i class="bi bi-star-fill"></i></label>
+                                    <input type="radio" id="s4" name="rating" value="4" /><label for="s4"><i class="bi bi-star-fill"></i></label>
+                                    <input type="radio" id="s3" name="rating" value="3" /><label for="s3"><i class="bi bi-star-fill"></i></label>
+                                    <input type="radio" id="s2" name="rating" value="2" /><label for="s2"><i class="bi bi-star-fill"></i></label>
+                                    <input type="radio" id="s1" name="rating" value="1" /><label for="s1"><i class="bi bi-star-fill"></i></label>
+                                </div>
+                            </div>
+                        </div>
+                        <textarea id="commentContent" name="content" rows="3" class="form-control form-control-premium mb-2" placeholder="Nhận xét của bạn về tài liệu này..." required></textarea>
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-premium btn-sm"><i class="bi bi-send me-1"></i>Gửi đánh giá</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Comment list -->
+                <div id="commentList" class="d-flex flex-column gap-3">
+                    @if (!Model.Comments.Any())
+                    {
+                        <div class="empty-state py-3" id="emptyCommentsMsg">
+                            <div class="empty-state-icon" style="font-size:2rem;"><i class="bi bi-chat-square-dots"></i></div>
+                            <p class="text-muted mb-0">Chưa có đánh giá nào. Hãy là người đầu tiên!</p>
+                        </div>
+                    }
+                    @foreach (var c in Model.Comments)
+                    {
+                        <div class="p-3 rounded" style="background:rgba(255,255,255,0.02);border:1px solid var(--card-border);">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="fw-semibold" style="font-size:.875rem;">@c.Author</span>
+                                    <span class="stars" style="font-size:.75rem;">
+                                        @for(int i=1;i<=5;i++){<text>@(i<=c.Rating?"<i class=\"bi bi-star-fill\"></i>":"<i class=\"bi bi-star opacity-30\"></i>")</text>}
+                                    </span>
+                                </div>
+                                <span class="text-muted" style="font-size:.72rem;">@c.CreatedDate.ToString("dd/MM/yyyy HH:mm")</span>
+                            </div>
+                            <p class="text-secondary mb-0" style="font-size:.85rem;line-height:1.5;">@c.Content</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== RIGHT: Sidebar Info ===== -->
+        <div class="col-lg-4">
+            <div class="glass-card position-lg-sticky" style="top:90px;">
+                <!-- Category + Level badges -->
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <span class="badge rounded-pill px-3 py-2" style="background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.2);color:var(--primary);font-size:.75rem;">
+                        <i class="bi bi-folder2-open me-1"></i>@(Model.Category?.Name ?? "Khác")
+                    </span>
+                    <span class="level-badge @LevelCls(Model.Level)">@Model.Level</span>
+                    <span class="badge rounded-pill px-3 py-2" style="background:rgba(34,211,238,0.1);border:1px solid rgba(34,211,238,0.2);color:var(--accent);font-size:.75rem;">
+                        <i class="bi bi-translate me-1"></i>@Model.Language
+                    </span>
+                </div>
+
+                <h3 class="fw-bold mb-3" style="font-size:1.15rem;line-height:1.4;">@Model.Title</h3>
+
+                @if (!string.IsNullOrEmpty(Model.Description))
+                {
+                    <p class="text-secondary mb-3" style="font-size:.85rem;line-height:1.6;">@Model.Description</p>
+                }
+
+                <!-- Metadata table -->
+                <div class="mb-3" style="border-top:1px solid var(--card-border);padding-top:1rem;">
+                    <table class="w-100" style="font-size:.8125rem;">
+                        <tr class="border-bottom" style="border-color:rgba(255,255,255,0.05)!important;">
+                            <td class="text-muted py-2"><i class="bi bi-file-earmark me-1"></i>Định dạng</td>
+                            <td class="text-end fw-600 text-uppercase py-2"><span class="badge-file @FileBadge(Model.FileExtension)">@Ext(Model.FileExtension)</span></td>
+                        </tr>
+                        <tr class="border-bottom" style="border-color:rgba(255,255,255,0.05)!important;">
+                            <td class="text-muted py-2"><i class="bi bi-hdd me-1"></i>Dung lượng</td>
+                            <td class="text-end fw-semibold py-2">@FmtSize(Model.FileSize)</td>
+                        </tr>
+                        <tr class="border-bottom" style="border-color:rgba(255,255,255,0.05)!important;">
+                            <td class="text-muted py-2"><i class="bi bi-person me-1"></i>Tác giả</td>
+                            <td class="text-end fw-semibold py-2">@Model.Author</td>
+                        </tr>
+                        @if (!string.IsNullOrEmpty(Model.Source))
+                        {
+                            <tr class="border-bottom" style="border-color:rgba(255,255,255,0.05)!important;">
+                                <td class="text-muted py-2"><i class="bi bi-link-45deg me-1"></i>Nguồn</td>
+                                <td class="text-end fw-semibold py-2">@Model.Source</td>
+                            </tr>
+                        }
+                        <tr class="border-bottom" style="border-color:rgba(255,255,255,0.05)!important;">
+                            <td class="text-muted py-2"><i class="bi bi-calendar3 me-1"></i>Ngày đăng</td>
+                            <td class="text-end fw-semibold py-2">@Model.UploadDate.ToString("dd/MM/yyyy")</td>
+                        </tr>
+                        <tr class="border-bottom" style="border-color:rgba(255,255,255,0.05)!important;">
+                            <td class="text-muted py-2"><i class="bi bi-eye me-1"></i>Lượt xem</td>
+                            <td class="text-end fw-semibold py-2">@Model.ViewCount</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted py-2"><i class="bi bi-download me-1"></i>Lượt tải</td>
+                            <td class="text-end fw-semibold py-2" id="dlCount">@Model.DownloadCount</td>
+                        </tr>
+                    </table>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.Tags))
+                {
+                    <div class="mb-3">
+                        <div class="d-flex flex-wrap gap-1">
+                            @foreach (var tag in Model.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                            {
+                                <span class="badge" style="background:rgba(255,255,255,0.06);color:var(--text-secondary);border:1px solid var(--card-border);font-size:.7rem;font-weight:500;">
+                                    #@tag
+                                </span>
+                            }
+                        </div>
+                    </div>
+                }
+
+                <div class="d-grid gap-2">
+                    <a asp-action="Download" asp-route-id="@Model.Id" class="btn btn-premium py-3" id="dlBtn">
+                        <i class="bi bi-cloud-arrow-down-fill me-1"></i>Tải xuống tài liệu
+                    </a>
+                    <a asp-controller="Home" asp-action="Index" class="btn btn-premium-outline">
+                        <i class="bi bi-arrow-left me-1"></i>Quay lại
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@section Scripts {
+<script>
+$('#dlBtn').on('click', function(){
+    setTimeout(()=>{ $('#dlCount').text(parseInt($('#dlCount').text())+1); }, 800);
+});
+$('#commentForm').on('submit', function(e){
+    e.preventDefault();
+    $.post('@Url.Action("AddComment","Document")', {
+        documentId: $('[name=documentId]').val(),
+        author:     $('#commentAuthor').val(),
+        content:    $('#commentContent').val(),
+        rating:     $('[name=rating]:checked').val()
+    }, function(r){
+        if(!r.success){ alert(r.message); return; }
+        $('#emptyCommentsMsg').remove();
+        var stars='';
+        for(var i=1;i<=5;i++) stars += i<=r.rating
+            ? '<i class="bi bi-star-fill text-warning"></i>'
+            : '<i class="bi bi-star opacity-30 text-warning"></i>';
+        var html = `<div class="p-3 rounded" style="background:rgba(99,102,241,0.05);border:1px solid rgba(99,102,241,0.15);animation:fadeIn .3s ease">
+            <div class="d-flex justify-content-between align-items-start mb-1">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="fw-semibold" style="font-size:.875rem;">${esc(r.author)}</span>
+                    <span class="stars" style="font-size:.75rem;">${stars}</span>
+                </div>
+                <span class="text-muted" style="font-size:.72rem;">${r.date}</span>
+            </div>
+            <p class="text-secondary mb-0" style="font-size:.85rem;line-height:1.5;">${esc(r.content)}</p>
+        </div>`;
+        $('#commentList').prepend(html);
+        $('#commentContent').val('');
+        $('#commentAuthor').val('');
+    });
+});
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+}

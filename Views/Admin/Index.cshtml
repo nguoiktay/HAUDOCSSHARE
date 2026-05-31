@@ -1,0 +1,316 @@
+@model List<Documentshare.Models.Document>
+@{
+    ViewData["Title"] = "Admin Panel - DocShare";
+    var totalDocs      = ViewBag.TotalDocs      as int? ?? 0;
+    var totalApproved  = ViewBag.TotalApproved  as int? ?? 0;
+    var totalPending   = ViewBag.TotalPending   as int? ?? 0;
+    var totalUsers     = ViewBag.TotalUsers     as int? ?? 0;
+    var totalAdmins    = ViewBag.TotalAdmins    as int? ?? 0;
+    var totalDownloads = ViewBag.TotalDownloads as int? ?? 0;
+    var totalViews     = ViewBag.TotalViews     as int? ?? 0;
+}
+
+@functions {
+    static string Ext(string e) => (e ?? "").ToLower().TrimStart('.');
+    static string FmtSize(long b) {
+        if (b == 0) return "—";
+        string[] s = { "B", "KB", "MB", "GB" }; int i = 0; double v = b;
+        while (v >= 1024 && i < s.Length - 1) { v /= 1024; i++; }
+        return $"{v:0.#} {s[i]}";
+    }
+    static string FileIconCls(string e) => Ext(e) switch {
+        "pdf" => "bi-file-pdf text-danger",
+        "doc" or "docx" => "bi-file-word text-primary",
+        "xls" or "xlsx" => "bi-file-excel text-success",
+        "ppt" or "pptx" => "bi-file-ppt text-warning",
+        "zip" or "rar" => "bi-file-zip text-warning",
+        "png" or "jpg" or "jpeg" => "bi-file-image text-info",
+        _ => "bi-file-earmark text-secondary"
+    };
+}
+
+<style>
+    .admin-layout { display: flex; min-height: calc(100vh - 70px); }
+
+    /* Sidebar */
+    .admin-sidebar {
+        width: 240px; min-width: 240px;
+        background: rgba(8,12,28,0.95);
+        border-right: 1px solid rgba(255,255,255,0.06);
+        padding: 1.5rem 1rem;
+        position: sticky; top: 70px; height: calc(100vh - 70px);
+        overflow-y: auto;
+    }
+    .sidebar-brand {
+        display: flex; align-items: center; gap: .6rem;
+        padding: .5rem .75rem 1.25rem;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        margin-bottom: 1rem;
+    }
+    .sidebar-brand .brand-icon {
+        width: 34px; height: 34px; border-radius: 9px;
+        background: linear-gradient(135deg,#ef4444,#dc2626);
+        display:flex;align-items:center;justify-content:center;
+        color:white;font-size:.95rem;flex-shrink:0;
+    }
+    .sidebar-brand .brand-name { font-weight: 800; font-size: .95rem; color: #f1f5f9; }
+    .sidebar-brand .brand-sub  { font-size: .68rem; color: #ef4444; font-weight: 600; letter-spacing: .06em; }
+
+    .sidebar-section { font-size: .65rem; font-weight: 700; letter-spacing: .12em;
+        color: #334155; padding: .5rem .75rem .25rem; text-transform: uppercase; }
+    .sidebar-link {
+        display: flex; align-items: center; gap: .6rem;
+        padding: .55rem .75rem; border-radius: 9px; color: #64748b;
+        font-size: .875rem; font-weight: 500; text-decoration: none;
+        transition: all .2s; margin-bottom: 2px;
+    }
+    .sidebar-link:hover { background: rgba(255,255,255,0.04); color: #f1f5f9; }
+    .sidebar-link.active {
+        background: rgba(239,68,68,0.12);
+        color: #fb7185; border: 1px solid rgba(239,68,68,0.2);
+    }
+    .sidebar-link .badge-count {
+        margin-left: auto; background: rgba(239,68,68,0.2); color: #fb7185;
+        border-radius: 999px; padding: .1rem .5rem; font-size: .7rem; font-weight: 700;
+    }
+
+    /* Main content */
+    .admin-main { flex: 1; padding: 2rem; min-width: 0; }
+
+    /* Stats grid */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px,1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .stat-card {
+        background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 14px; padding: 1.25rem; transition: transform .2s;
+    }
+    .stat-card:hover { transform: translateY(-2px); }
+    .stat-icon {
+        width: 42px; height: 42px; border-radius: 11px;
+        display:flex;align-items:center;justify-content:center;
+        font-size:1.2rem; margin-bottom:.75rem;
+    }
+    .stat-value { font-size: 1.75rem; font-weight: 800; color: #f1f5f9; line-height:1; margin-bottom:.2rem; }
+    .stat-label { font-size: .75rem; color: #64748b; font-weight: 600; }
+
+    /* Section header */
+    .section-hdr {
+        display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem;flex-wrap:wrap;
+    }
+    .section-hdr h2 { font-size:1.1rem;font-weight:800;color:var(--text-primary);margin:0; }
+    .section-hdr .cnt {
+        background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.25);
+        color:#fb7185;border-radius:999px;padding:.15rem .65rem;font-size:.75rem;font-weight:700;
+    }
+
+    /* Pending cards */
+    .pending-card {
+        background:rgba(15,23,42,0.7);border:1px solid rgba(255,255,255,0.06);
+        border-radius:14px;padding:1.25rem;margin-bottom:.75rem;
+        transition:border-color .2s;
+    }
+    .pending-card:hover { border-color:rgba(99,102,241,0.25); }
+
+    .btn-approve {
+        background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);
+        color:#34d399;border-radius:8px;font-weight:600;padding:.4rem .85rem;
+        font-size:.8125rem;cursor:pointer;transition:all .2s;white-space:nowrap;
+    }
+    .btn-approve:hover { background:rgba(16,185,129,0.22); }
+    .btn-reject {
+        background:rgba(244,63,94,0.1);border:1px solid rgba(244,63,94,0.2);
+        color:#fb7185;border-radius:8px;font-weight:600;padding:.4rem .85rem;
+        font-size:.8125rem;cursor:pointer;transition:all .2s;white-space:nowrap;
+    }
+    .btn-reject:hover { background:rgba(244,63,94,0.2); }
+    .btn-view-sm {
+        background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.2);
+        color:#818cf8;border-radius:8px;font-weight:600;padding:.4rem .85rem;
+        font-size:.8125rem;cursor:pointer;transition:all .2s;text-decoration:none;
+        white-space:nowrap;display:inline-block;
+    }
+    .btn-view-sm:hover { background:rgba(99,102,241,0.2);color:#a5b4fc; }
+
+    .empty-admin {
+        text-align:center;padding:3rem;background:rgba(15,23,42,0.5);
+        border:1px dashed rgba(255,255,255,0.08);border-radius:16px;
+    }
+
+    @@media (max-width:768px) {
+        .admin-sidebar { display:none; }
+        .admin-main { padding: 1rem; }
+        .stats-grid { grid-template-columns: repeat(2,1fr); }
+    }
+</style>
+
+<div class="admin-layout">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar">
+        <div class="sidebar-brand">
+            <div class="brand-icon"><i class="bi bi-shield-fill"></i></div>
+            <div>
+                <div class="brand-name">Admin Panel</div>
+                <div class="brand-sub">DOCSHARE</div>
+            </div>
+        </div>
+
+        <div class="sidebar-section">Tổng quan</div>
+        <a href="/Admin" class="sidebar-link active">
+            <i class="bi bi-speedometer2"></i> Dashboard
+            @if (totalPending > 0)
+            {
+                <span class="badge-count">@totalPending</span>
+            }
+        </a>
+
+        <div class="sidebar-section" style="margin-top:.75rem;">Quản lý</div>
+        <a href="/Admin/Documents" class="sidebar-link">
+            <i class="bi bi-file-earmark-text"></i> Tài liệu
+        </a>
+        <a href="/Admin/Users" class="sidebar-link">
+            <i class="bi bi-people"></i> Người dùng
+        </a>
+
+        <div class="sidebar-section" style="margin-top:.75rem;">Hệ thống</div>
+        <a href="/" class="sidebar-link">
+            <i class="bi bi-house-door"></i> Trang chủ
+        </a>
+        <form asp-controller="Account" asp-action="Logout" method="post" style="margin:0">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="sidebar-link w-100 border-0 text-start" style="background:none;cursor:pointer;">
+                <i class="bi bi-box-arrow-left"></i> Đăng xuất
+            </button>
+        </form>
+    </aside>
+
+    <!-- Main -->
+    <main class="admin-main">
+        <!-- Page header -->
+        <div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+            <div>
+                <h1 class="fw-bold mb-1" style="font-size:1.6rem;letter-spacing:-.5px;color:var(--text-primary);">
+                    <i class="bi bi-speedometer2 me-2" style="color:#fb7185;"></i>Dashboard
+                </h1>
+                <p class="mb-0" style="color:#64748b;font-size:.875rem;">Xin chào,
+                    <strong style="color:#818cf8;">@Context.Session.GetString("UserDisplayName")</strong> 👋
+                </p>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon" style="background:rgba(99,102,241,0.15);">
+                    <i class="bi bi-file-earmark-text" style="color:#818cf8;"></i>
+                </div>
+                <div class="stat-value">@totalDocs</div>
+                <div class="stat-label">Tổng tài liệu</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background:rgba(16,185,129,0.15);">
+                    <i class="bi bi-check-circle" style="color:#34d399;"></i>
+                </div>
+                <div class="stat-value">@totalApproved</div>
+                <div class="stat-label">Đã duyệt</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background:rgba(239,68,68,0.15);">
+                    <i class="bi bi-clock-history" style="color:#fb7185;"></i>
+                </div>
+                <div class="stat-value">@totalPending</div>
+                <div class="stat-label">Chờ duyệt</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background:rgba(34,211,238,0.12);">
+                    <i class="bi bi-people" style="color:#22d3ee;"></i>
+                </div>
+                <div class="stat-value">@totalUsers</div>
+                <div class="stat-label">Thành viên</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background:rgba(245,158,11,0.12);">
+                    <i class="bi bi-download" style="color:#fbbf24;"></i>
+                </div>
+                <div class="stat-value">@totalDownloads</div>
+                <div class="stat-label">Lượt tải</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background:rgba(168,85,247,0.12);">
+                    <i class="bi bi-eye" style="color:#c084fc;"></i>
+                </div>
+                <div class="stat-value">@totalViews</div>
+                <div class="stat-label">Lượt xem</div>
+            </div>
+        </div>
+
+        <!-- Pending documents -->
+        <div class="section-hdr">
+            <h2><i class="bi bi-clock-history me-2" style="color:#fb7185;"></i>Tài liệu chờ duyệt</h2>
+            <span class="cnt">@Model.Count chờ duyệt</span>
+        </div>
+
+        @if (!Model.Any())
+        {
+            <div class="empty-admin">
+                <i class="bi bi-shield-check" style="font-size:3rem;color:#34d399;"></i>
+                <h4 class="fw-bold mt-3 mb-1" style="color:#34d399;">Tất cả đã được duyệt!</h4>
+                <p style="color:#64748b;">Không có tài liệu nào đang chờ phê duyệt.</p>
+            </div>
+        }
+        else
+        {
+            @foreach (var doc in Model)
+            {
+                <div class="pending-card">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-auto text-center d-none d-md-block" style="min-width:70px;">
+                            <i class="bi @FileIconCls(doc.FileExtension)" style="font-size:2.2rem;"></i>
+                            <div style="font-size:.68rem;font-weight:700;color:#475569;margin-top:.25rem;">@Ext(doc.FileExtension).ToUpper()</div>
+                            <div style="font-size:.68rem;color:#334155;">@FmtSize(doc.FileSize)</div>
+                        </div>
+                        <div class="col">
+                            <div class="d-flex flex-wrap gap-2 mb-1">
+                                <span style="background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.2);color:#818cf8;border-radius:999px;padding:.1rem .6rem;font-size:.7rem;font-weight:600;">
+                                    <i class="bi bi-folder2 me-1"></i>@(doc.Category?.Name ?? "Khác")
+                                </span>
+                                <span style="color:#475569;font-size:.72rem;">
+                                    <i class="bi bi-clock me-1"></i>@doc.UploadDate.ToString("dd/MM/yyyy HH:mm")
+                                </span>
+                            </div>
+                            <h5 class="fw-bold mb-1" style="font-size:.975rem;color:var(--text-primary);">@doc.Title</h5>
+                            @if (!string.IsNullOrEmpty(doc.Description))
+                            {
+                                <p style="font-size:.8rem;color:#64748b;margin-bottom:.5rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+                                    @doc.Description
+                                </p>
+                            }
+                            <div style="font-size:.75rem;color:#475569;">
+                                <span class="me-3"><i class="bi bi-person me-1"></i>@doc.Author</span>
+                                <span><i class="bi bi-bar-chart-steps me-1"></i>@doc.Level</span>
+                            </div>
+                        </div>
+                        <div class="col-auto d-flex flex-column gap-2" style="min-width:120px;">
+                            <a asp-controller="Document" asp-action="Details" asp-route-id="@doc.Id" class="btn-view-sm" target="_blank">
+                                <i class="bi bi-eye me-1"></i>Xem
+                            </a>
+                            <form asp-action="Approve" method="post">
+                                <input type="hidden" name="id" value="@doc.Id" />
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn-approve w-100">
+                                    <i class="bi bi-check2 me-1"></i>Duyệt
+                                </button>
+                            </form>
+                            <form asp-action="Reject" method="post">
+                                <input type="hidden" name="id" value="@doc.Id" />
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn-reject w-100"
+                                        onclick="return confirm('Từ chối và XÓA tài liệu này?')">
+                                    <i class="bi bi-trash me-1"></i>Từ chối
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </main>
+</div>

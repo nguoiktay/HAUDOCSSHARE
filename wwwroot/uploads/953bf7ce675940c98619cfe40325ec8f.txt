@@ -1,0 +1,3 @@
+Tài liệu: Lap trinh Python tu co ban den nang cao
+Tác giả: Nguyen Dev
+Mô tả: Bo tai lieu hoc Python hoan chinh bao gom cu phap, OOP, xu ly file, API va cac thu vien pho bien.
