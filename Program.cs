@@ -5,6 +5,14 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
 
+// ── HttpClient cho Python AI Chatbot Service ──────────────────────────────
+builder.Services.AddHttpClient("PythonChatbot", client =>
+{
+    client.BaseAddress = new Uri("http://localhost:8001");
+    client.Timeout     = TimeSpan.FromSeconds(30);
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+});
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
