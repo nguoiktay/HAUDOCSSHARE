@@ -1,7 +1,7 @@
 @echo off
 echo ============================================
 echo   HAUDOCSSHARE AI Chatbot Service v2.0
-echo   Powered by Google Gemini + FastAPI
+echo   Powered by OpenRouter AI + FastAPI
 echo ============================================
 echo.
 

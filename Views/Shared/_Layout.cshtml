@@ -425,6 +425,15 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 </script>
 
+<script>
+// Reload page on back navigation to prevent caching of outdated review counts and statistics
+window.addEventListener('pageshow', function (event) {
+    if (event.persisted) {
+        window.location.reload();
+    }
+});
+</script>
+
 @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

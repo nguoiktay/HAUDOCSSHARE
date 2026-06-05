@@ -34,7 +34,7 @@ namespace Documentshare.Controllers
             {
                 return Json(new ChatResponse
                 {
-                    Response = "<p>👋 <strong>Xin chào!</strong> Mình là Trợ lý ảo HAUDOCSSHARE — được hỗ trợ bởi AI Gemini. Hãy hỏi mình bất kỳ điều gì!</p>",
+                    Response = "<p>👋 <strong>Xin chào!</strong> Mình là Trợ lý ảo HAUDOCSSHARE — được hỗ trợ bởi AI OpenRouter. Hãy hỏi mình bất kỳ điều gì!</p>",
                     Suggestions = new List<string> { "Tìm tài liệu Đại số", "Cách đăng tài liệu", "Quy chế duyệt bài" }
                 });
             }
@@ -110,8 +110,7 @@ namespace Documentshare.Controllers
                 msg.Contains("chào") || msg.Contains("bắt đầu") || msg.Equals("bot"))
             {
                 response = "<p>👋 <strong>Xin chào!</strong> Mình là Trợ lý ảo HAUDOCSSHARE.</p>" +
-                           "<p>⚠️ <em>Lưu ý: AI Gemini đang offline. Mình đang chạy ở chế độ cơ bản.</em></p>" +
-                           "<p>Mình có thể giúp: 🔍 Tìm tài liệu · 📤 Hướng dẫn đăng tải · 🛡️ Quy chế duyệt bài</p>";
+                           "<p>Mình luôn sẵn sàng hỗ trợ bạn: 🔍 Tìm tài liệu · 📤 Hướng dẫn đăng tải · 🛡️ Quy chế duyệt bài</p>";
                 suggestions.AddRange(new[] { "Tìm tài liệu C#", "Cách đăng tài liệu?", "Quy chế kiểm duyệt?" });
             }
             // 2. SEARCH
@@ -190,7 +189,7 @@ namespace Documentshare.Controllers
             // 6. DEFAULT
             else
             {
-                response = "<p>🤖 Mình chưa hiểu rõ câu hỏi. <em>(AI Gemini đang offline — đang chạy chế độ cơ bản)</em></p><p>Bạn có thể hỏi về: tìm tài liệu, cách đăng tải, quy chế duyệt bài hoặc liên hệ Admin.</p>";
+                response = "<p>🤖 Mình chưa hiểu rõ câu hỏi này. Bạn hãy thử nhập tên môn học cần tìm (ví dụ: <em>'C#'</em>) hoặc hỏi về hướng dẫn đăng tài liệu, quy chế duyệt bài nhé!</p>";
                 suggestions.AddRange(new[] { "Tìm tài liệu học tập", "Cách đăng tài liệu", "Liên hệ Admin hỗ trợ" });
             }
 

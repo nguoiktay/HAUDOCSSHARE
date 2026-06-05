@@ -1,12 +1,15 @@
 @model Documentshare.Models.Document
 @{
     ViewData["Title"] = Model.Title;
-    var role    = Context.Request.Cookies["DocumentShare_Role"] ?? "User";
+    var role    = Context.Session.GetString("UserRole") ?? "User";
     var isAdmin = role == "Admin";
     var avg     = Model.Comments.Any() ? Model.Comments.Average(c => c.Rating) : 0.0;
     var cnt     = Model.Comments.Count;
     var activeSub = ViewBag.ActiveSubDocument as Documentshare.Models.Document;
     var isPlaylist = Model.SubDocuments != null && Model.SubDocuments.Count > 0;
+    var userName = Context.Session.GetString("UserName");
+    var userDisplayName = Context.Session.GetString("UserDisplayName") ?? "Người dùng";
+    var isLoggedIn = !string.IsNullOrEmpty(userName);
 }
 
 <style>
@@ -122,9 +125,20 @@
                         <i class="bi bi-file-earmark-lock2 fs-1 text-muted opacity-40"></i>
                         <div class="text-center">
                             <p class="text-muted mb-2">Không hỗ trợ xem trước định dạng <strong>.@Ext(Model.FileExtension)</strong></p>
-                            <a asp-action="Download" asp-route-id="@Model.Id" class="btn btn-premium btn-sm">
-                                <i class="bi bi-download me-1"></i>Tải xuống để xem (@FmtSize(Model.FileSize))
-                            </a>
+                            @if (isLoggedIn)
+                            {
+                                <a asp-action="Download" asp-route-id="@Model.Id" class="btn btn-premium btn-sm">
+                                    <i class="bi bi-download me-1"></i>Tải xuống để xem (@FmtSize(Model.FileSize))
+                                </a>
+                            }
+                            else
+                            {
+                                <a asp-controller="Account" asp-action="Login"
+                                   asp-route-returnUrl="@Url.Action("Details", "Document", new { id = Model.Id })"
+                                   class="btn btn-premium btn-sm">
+                                    <i class="bi bi-box-arrow-in-right me-1"></i>Đăng nhập để tải xuống
+                                </a>
+                            }
                         </div>
                     </div>
                 }
@@ -147,32 +161,45 @@
                     </div>
                 }
 
-                <!-- New comment form -->
-                <div class="mb-4 p-3 rounded" style="background:rgba(99,102,241,0.05);border:1px solid rgba(99,102,241,0.15);">
-                    <h6 class="fw-semibold mb-3">Viết đánh giá của bạn</h6>
-                    <form id="commentForm">
-                        <input type="hidden" name="documentId" value="@Model.Id" />
-                        <div class="row g-2 mb-2">
-                            <div class="col-sm-6">
-                                <input type="text" id="commentAuthor" name="author" class="form-control form-control-premium" placeholder="Tên của bạn" required />
-                            </div>
-                            <div class="col-sm-6 d-flex align-items-center gap-2">
-                                <span class="text-muted" style="font-size:.8rem;white-space:nowrap;">Đánh giá:</span>
-                                <div class="rating-picker">
-                                    <input type="radio" id="s5" name="rating" value="5" checked /><label for="s5"><i class="bi bi-star-fill"></i></label>
-                                    <input type="radio" id="s4" name="rating" value="4" /><label for="s4"><i class="bi bi-star-fill"></i></label>
-                                    <input type="radio" id="s3" name="rating" value="3" /><label for="s3"><i class="bi bi-star-fill"></i></label>
-                                    <input type="radio" id="s2" name="rating" value="2" /><label for="s2"><i class="bi bi-star-fill"></i></label>
-                                    <input type="radio" id="s1" name="rating" value="1" /><label for="s1"><i class="bi bi-star-fill"></i></label>
+                <!-- New comment form / Login prompt -->
+                @if (!isLoggedIn)
+                {
+                    <div class="mb-4 p-4 rounded text-center" style="background:rgba(255,255,255,0.02);border:1px dashed var(--card-border);">
+                        <i class="bi bi-chat-square-text-fill fs-2 mb-2 text-muted opacity-50"></i>
+                        <p class="text-secondary mb-3" style="font-size:.9rem;">Bạn cần đăng nhập để viết đánh giá và nhận xét cho tài liệu này.</p>
+                        <a href="@Url.Action("Login", "Account", new { returnUrl = Context.Request.Path + Context.Request.QueryString })" class="btn btn-premium btn-sm px-4">
+                            <i class="bi bi-box-arrow-in-right me-1"></i>Đăng nhập ngay
+                        </a>
+                    </div>
+                }
+                else
+                {
+                    <div class="mb-4 p-3 rounded" style="background:rgba(99,102,241,0.05);border:1px solid rgba(99,102,241,0.15);">
+                        <h6 class="fw-semibold mb-3">Viết đánh giá của bạn</h6>
+                        <form id="commentForm">
+                            <input type="hidden" name="documentId" value="@Model.Id" />
+                            <div class="row g-2 mb-2">
+                                <div class="col-sm-6">
+                                    <input type="text" id="commentAuthor" name="author" class="form-control form-control-premium" value="@userDisplayName" readonly style="background: rgba(255,255,255,0.05); cursor: not-allowed;" />
+                                </div>
+                                <div class="col-sm-6 d-flex align-items-center gap-2">
+                                    <span class="text-muted" style="font-size:.8rem;white-space:nowrap;">Đánh giá:</span>
+                                    <div class="rating-picker">
+                                        <input type="radio" id="s5" name="rating" value="5" checked /><label for="s5"><i class="bi bi-star-fill"></i></label>
+                                        <input type="radio" id="s4" name="rating" value="4" /><label for="s4"><i class="bi bi-star-fill"></i></label>
+                                        <input type="radio" id="s3" name="rating" value="3" /><label for="s3"><i class="bi bi-star-fill"></i></label>
+                                        <input type="radio" id="s2" name="rating" value="2" /><label for="s2"><i class="bi bi-star-fill"></i></label>
+                                        <input type="radio" id="s1" name="rating" value="1" /><label for="s1"><i class="bi bi-star-fill"></i></label>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <textarea id="commentContent" name="content" rows="3" class="form-control form-control-premium mb-2" placeholder="Nhận xét của bạn về tài liệu này..." required></textarea>
-                        <div class="text-end">
-                            <button type="submit" class="btn btn-premium btn-sm"><i class="bi bi-send me-1"></i>Gửi đánh giá</button>
-                        </div>
-                    </form>
-                </div>
+                            <textarea id="commentContent" name="content" rows="3" class="form-control form-control-premium mb-2" placeholder="Nhận xét của bạn về tài liệu này..." required></textarea>
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-premium btn-sm"><i class="bi bi-send me-1"></i>Gửi đánh giá</button>
+                            </div>
+                        </form>
+                    </div>
+                }
 
                 <!-- Comment list -->
                 <div id="commentList" class="d-flex flex-column gap-3">
@@ -300,9 +327,23 @@
                 }
 
                 <div class="d-grid gap-2">
-                    <a asp-action="Download" asp-route-id="@Model.Id" class="btn btn-premium py-3" id="dlBtn">
-                        <i class="bi bi-cloud-arrow-down-fill me-1"></i>Tải xuống tài liệu
-                    </a>
+                    @if (isLoggedIn)
+                    {
+                        <a asp-action="Download" asp-route-id="@Model.Id" class="btn btn-premium py-3" id="dlBtn">
+                            <i class="bi bi-cloud-arrow-down-fill me-1"></i>Tải xuống tài liệu
+                        </a>
+                    }
+                    else
+                    {
+                        <a asp-controller="Account" asp-action="Login"
+                           asp-route-returnUrl="@Url.Action("Details", "Document", new { id = Model.Id })"
+                           class="btn btn-premium py-3">
+                            <i class="bi bi-box-arrow-in-right me-1"></i>Đăng nhập để tải tài liệu
+                        </a>
+                        <small class="text-center text-muted" style="font-size:.75rem;">
+                            <i class="bi bi-lock-fill me-1"></i>Bạn cần đăng nhập để tải xuống
+                        </small>
+                    }
                     <a asp-controller="Home" asp-action="Index" class="btn btn-premium-outline">
                         <i class="bi bi-arrow-left me-1"></i>Quay lại
                     </a>
@@ -327,24 +368,7 @@ $('#commentForm').on('submit', function(e){
         rating:     $('[name=rating]:checked').val()
     }, function(r){
         if(!r.success){ alert(r.message); return; }
-        $('#emptyCommentsMsg').remove();
-        var stars='';
-        for(var i=1;i<=5;i++) stars += i<=r.rating
-            ? '<i class="bi bi-star-fill text-warning"></i>'
-            : '<i class="bi bi-star opacity-30 text-warning"></i>';
-        var html = `<div class="p-3 rounded" style="background:rgba(99,102,241,0.05);border:1px solid rgba(99,102,241,0.15);animation:fadeIn .3s ease">
-            <div class="d-flex justify-content-between align-items-start mb-1">
-                <div class="d-flex align-items-center gap-2">
-                    <span class="fw-semibold" style="font-size:.875rem;">${esc(r.author)}</span>
-                    <span class="stars" style="font-size:.75rem;">${stars}</span>
-                </div>
-                <span class="text-muted" style="font-size:.72rem;">${r.date}</span>
-            </div>
-            <p class="text-secondary mb-0" style="font-size:.85rem;line-height:1.5;">${esc(r.content)}</p>
-        </div>`;
-        $('#commentList').prepend(html);
-        $('#commentContent').val('');
-        $('#commentAuthor').val('');
+        window.location.reload();
     });
 });
 function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }

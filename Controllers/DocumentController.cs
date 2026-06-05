@@ -112,6 +112,14 @@ namespace Documentshare.Controllers
         // Download file
         public async Task<IActionResult> Download(int id)
         {
+            // Chỉ cho phép người dùng đã đăng nhập tải tài liệu
+            var userId = HttpContext.Session.GetInt32("UserId");
+            if (userId == null)
+            {
+                TempData["ErrorMessage"] = "Vui lòng đăng nhập để tải tài liệu.";
+                return RedirectToAction("Login", "Account", new { returnUrl = Url.Action("Details", "Document", new { id }) });
+            }
+
             var doc = await _context.Documents.FindAsync(id);
             if (doc == null) return NotFound();
 
@@ -133,9 +141,22 @@ namespace Documentshare.Controllers
         [HttpGet]
         public async Task<IActionResult> Upload()
         {
+            var userId = HttpContext.Session.GetInt32("UserId");
+            if (userId == null)
+            {
+                TempData["ErrorMessage"] = "Vui lòng đăng nhập để thực hiện tải lên tài liệu.";
+                return RedirectToAction("Login", "Account", new { returnUrl = Url.Action("Upload", "Document") });
+            }
+
             ViewBag.Categories = await _context.Categories.OrderBy(c => c.Name).ToListAsync();
             ViewBag.UploadType = "file";
-            return View();
+
+            var userDisplayName = HttpContext.Session.GetString("UserDisplayName");
+            var model = new Document
+            {
+                Author = userDisplayName ?? "Ẩn danh"
+            };
+            return View(model);
         }
 
         private string? ConvertGoogleDriveLinkToEmbed(string url)
@@ -297,6 +318,13 @@ namespace Documentshare.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Upload(Document model, IFormFile? file, string? uploadType, string? driveLink)
         {
+            var userId = HttpContext.Session.GetInt32("UserId");
+            if (userId == null)
+            {
+                TempData["ErrorMessage"] = "Vui lòng đăng nhập để thực hiện tải lên tài liệu.";
+                return RedirectToAction("Login", "Account", new { returnUrl = Url.Action("Upload", "Document") });
+            }
+
             // Remove server-generated fields from model validation
             ModelState.Remove(nameof(model.FilePath));
             ModelState.Remove(nameof(model.OriginalFileName));
@@ -482,7 +510,16 @@ namespace Documentshare.Controllers
         [HttpPost]
         public async Task<IActionResult> AddComment(int documentId, string author, string content, int rating)
         {
-            if (string.IsNullOrWhiteSpace(author) || string.IsNullOrWhiteSpace(content))
+            var userId = HttpContext.Session.GetInt32("UserId");
+            if (userId == null)
+            {
+                return Json(new { success = false, message = "Vui lòng đăng nhập để đánh giá tài liệu." });
+            }
+
+            var userDisplayName = HttpContext.Session.GetString("UserDisplayName");
+            var commentAuthor = !string.IsNullOrWhiteSpace(userDisplayName) ? userDisplayName : author;
+
+            if (string.IsNullOrWhiteSpace(commentAuthor) || string.IsNullOrWhiteSpace(content))
                 return Json(new { success = false, message = "Vui lòng nhập đầy đủ thông tin." });
 
             var doc = await _context.Documents.FindAsync(documentId);
@@ -491,7 +528,7 @@ namespace Documentshare.Controllers
             var comment = new Comment
             {
                 DocumentId  = documentId,
-                Author      = author.Trim(),
+                Author      = commentAuthor.Trim(),
                 Content     = content.Trim(),
                 Rating      = Math.Clamp(rating, 1, 5),
                 CreatedDate = DateTime.Now

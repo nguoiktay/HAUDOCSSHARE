@@ -97,6 +97,7 @@ namespace Documentshare.Controllers
             HttpContext.Session.Clear();
             Response.Cookies.Delete("DocumentShare_Session");
             Response.Cookies.Delete("DocumentShare_Role");
+            Response.Cookies.Delete("DS_RememberUser");
             TempData["SuccessMessage"] = "Bạn đã đăng xuất thành công.";
             return RedirectToAction("Index", "Home");
         }

@@ -1,6 +1,6 @@
 """
 main.py — FastAPI AI Chatbot Service cho HAUDOCSSHARE
-Sử dụng Google Gen AI SDK (google.genai) + Gemini với retry & model fallback
+Sử dụng OpenRouter AI Service với retry & model fallback
 Chạy: uvicorn main:app --port 8001 --reload
 """
 import os
@@ -192,14 +192,14 @@ def health_check():
 async def query_chatbot(req: ChatRequest):
     """
     1. Tìm tài liệu từ SQLite (RAG-lite)
-    2. Gọi Gemini với retry + fallback model
+    2. Gọi OpenRouter với retry + fallback model
     3. Trả về HTML response + suggestions
     """
     if not req.message or not req.message.strip():
         return ChatResponse(
             response=(
                 "<p>👋 <strong>Xin chào!</strong> Mình là Trợ lý ảo HAUDOCSSHARE — "
-                "được hỗ trợ bởi <strong>AI OpenRouter (Gemini / Llama)</strong>.<br>"
+                "được hỗ trợ bởi <strong>AI OpenRouter</strong>.<br>"
                 "Hỏi mình về tài liệu, cách sử dụng hệ thống hay bất cứ điều gì nhé!</p>"
             ),
             suggestions=["Tìm tài liệu Đại số", "Cách đăng tài liệu?", "Quy chế kiểm duyệt?"],

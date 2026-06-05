@@ -1,5 +1,5 @@
 """
-prompts.py — Xây dựng system prompt và user prompt cho Gemini AI
+prompts.py — Xây dựng system prompt và user prompt cho OpenRouter AI
 """
 
 SYSTEM_PROMPT = """Bạn là Trợ lý ảo thông minh của **HAUDOCSSHARE** — nền tảng chia sẻ tài liệu học tập dành riêng cho sinh viên Trường Đại học Kiến trúc Hà Nội (HAU).
@@ -90,7 +90,7 @@ def build_html_docs_block(docs: list[dict]) -> str:
 
 
 def build_user_prompt(user_message: str, docs: list[dict], categories: list[dict]) -> str:
-    """Ghép đầy đủ prompt gửi lên Gemini."""
+    """Ghép đầy đủ prompt gửi lên OpenRouter."""
     docs_context = build_docs_context(docs)
     cat_names = ", ".join(c["Name"] for c in categories) if categories else ""
 

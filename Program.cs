@@ -52,6 +52,28 @@ app.UseHttpsRedirection();
 app.UseRouting();
 
 app.UseSession();
+
+// Restore session from "Remember Me" cookie if session is null
+app.Use(async (context, next) =>
+{
+    if (context.Session.GetInt32("UserId") == null)
+    {
+        if (context.Request.Cookies.TryGetValue("DS_RememberUser", out var userIdStr) && int.TryParse(userIdStr, out var userId))
+        {
+            var dbContext = context.RequestServices.GetRequiredService<AppDbContext>();
+            var user = await dbContext.Users.FindAsync(userId);
+            if (user != null && user.IsActive)
+            {
+                context.Session.SetInt32("UserId", user.Id);
+                context.Session.SetString("UserName", user.Username);
+                context.Session.SetString("UserDisplayName", user.DisplayName);
+                context.Session.SetString("UserRole", user.Role);
+            }
+        }
+    }
+    await next();
+});
+
 app.UseAuthorization();
 
 app.MapStaticAssets();
