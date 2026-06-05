@@ -26,7 +26,7 @@ if %errorlevel% neq 0 (
 
 :: Kiem tra .env
 if not exist ".env" (
-    echo [LOI] Khong tim thay file .env. Vui long tao file .env voi GEMINI_API_KEY.
+    echo [LOI] Khong tim thay file .env. Vui long tao file .env voi OPENROUTER_API_KEY.
     pause
     exit /b 1
 )

@@ -13,8 +13,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
-from google import genai
-from google.genai import types
+from openai import AsyncOpenAI
 
 from db_search import search_documents, get_all_categories, get_recent_documents
 from prompts import (
@@ -34,30 +33,32 @@ logger = logging.getLogger("chatbot_ai")
 # ─── Load .env ───────────────────────────────────────────────────────────────
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-if not GEMINI_API_KEY:
-    raise RuntimeError("GEMINI_API_KEY chưa được cấu hình trong file .env!")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+if not OPENROUTER_API_KEY:
+    raise RuntimeError("OPENROUTER_API_KEY chưa được cấu hình trong file .env!")
 
 MODEL_PRIORITY = [
-    "models/gemini-2.5-flash-lite",    # Có sẵn quota, chạy cực kỳ ổn định và nhanh
-    "models/gemini-3.1-flash-lite",    # Mới nhất, phản hồi nhanh
-    "models/gemini-flash-latest",      # Gemini 1.5 Flash (ổn định, quota cao)
-    "models/gemini-flash-lite-latest", # Gemini 1.5 Flash Lite
-    "models/gemini-2.5-flash",         # Giới hạn quota free tier 20 requests/ngày
-    "models/gemini-2.0-flash-lite",    # Dự phòng
-    "models/gemini-2.0-flash",         # Dự phòng
+    "google/gemma-4-31b-it:free",
+    "openrouter/free",
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "qwen/qwen3-coder:free",
+    "meta-llama/llama-3.2-3b-instruct:free",
 ]
 
-# ─── Gemini client ────────────────────────────────────────────────────────────
-gemini_client: genai.Client | None = None
+# ─── OpenRouter client ────────────────────────────────────────────────────────────
+ai_client: AsyncOpenAI | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global gemini_client
-    logger.info("🚀 Khởi tạo Gemini client...")
-    gemini_client = genai.Client(api_key=GEMINI_API_KEY)
-    logger.info(f"✅ Gemini client sẵn sàng! Model ưu tiên: {MODEL_PRIORITY[0]}")
+    global ai_client
+    logger.info("🚀 Khởi tạo OpenRouter client...")
+    ai_client = AsyncOpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=OPENROUTER_API_KEY,
+        max_retries=0,
+    )
+    logger.info(f"✅ OpenRouter client sẵn sàng! Model ưu tiên: {MODEL_PRIORITY[0]}")
     yield
     logger.info("🛑 Chatbot AI Service đã tắt.")
 
@@ -65,8 +66,8 @@ async def lifespan(app: FastAPI):
 # ─── FastAPI app ─────────────────────────────────────────────────────────────
 app = FastAPI(
     title="HAUDOCSSHARE AI Chatbot Service",
-    description="Trợ lý ảo thông minh dùng Gemini AI — có retry & model fallback",
-    version="2.1.0",
+    description="Trợ lý ảo thông minh dùng OpenRouter AI — có retry & model fallback",
+    version="2.2.0",
     lifespan=lifespan,
 )
 
@@ -96,20 +97,20 @@ class ChatResponse(BaseModel):
     model_used: str = ""
 
 
-# ─── Helper: Gọi Gemini với retry + model fallback (Async) ───────────────────
-async def call_gemini_with_fallback(
+# ─── Helper: Gọi OpenRouter với retry + model fallback (Async) ────────────────
+async def call_openrouter_with_fallback(
     prompt: str,
     system: str,
-    history: list[types.Content],
+    history: list[dict],
     max_retries: int = 1,
     retry_delay: float = 1.0,
 ) -> tuple[str, str]:
     """
-    Gọi Gemini bất đồng bộ. Nếu 503 hoặc quota hoặc timeout → thử model tiếp theo.
+    Gọi OpenRouter bất đồng bộ. Nếu lỗi mạng hoặc quota hoặc timeout → thử model tiếp theo.
     Trả về (response_text, model_name_used).
     """
-    if gemini_client is None:
-        raise RuntimeError("Gemini client chưa khởi tạo")
+    if ai_client is None:
+        raise RuntimeError("OpenRouter client chưa khởi tạo")
 
     last_error: Exception | None = None
 
@@ -118,38 +119,39 @@ async def call_gemini_with_fallback(
             try:
                 logger.info(f"🤖 Gọi {model_name} (lần {attempt + 1})...")
 
-                contents = history + [
-                    types.Content(role="user", parts=[types.Part(text=prompt)])
-                ]
+                messages = [{"role": "system", "content": system}]
+                messages.extend(history)
+                messages.append({"role": "user", "content": prompt})
 
-                # Sử dụng client.aio của google-genai SDK kèm timeout để tránh bị treo
+                # Gọi OpenRouter Chat Completion API
                 resp = await asyncio.wait_for(
-                    gemini_client.aio.models.generate_content(
+                    ai_client.chat.completions.create(
                         model=model_name,
-                        contents=contents,
-                        config=types.GenerateContentConfig(
-                            system_instruction=system,
-                            temperature=0.65,
-                            top_p=0.9,
-                        ),
+                        messages=messages,
+                        temperature=0.65,
+                        top_p=0.9,
+                        extra_headers={
+                            "HTTP-Referer": "https://github.com/googlecolab/colabtools",
+                            "X-Title": "HAUDOCSSHARE AI Chatbot",
+                        }
                     ),
-                    timeout=10.0  # Timeout 10 giây mỗi lượt gọi để chuyển model khác nếu bị nghẽn
+                    timeout=20.0  # Timeout 20 giây mỗi lượt gọi để chuyển model khác nếu bị nghẽn
                 )
-                text = resp.text or ""
+                text = resp.choices[0].message.content or ""
                 logger.info(f"✅ {model_name} phản hồi ({len(text)} ký tự)")
                 return text, model_name
 
             except asyncio.TimeoutError:
-                logger.warning(f"⏳ {model_name} bị quá thời gian (timeout 10s) → thử model tiếp theo")
-                last_error = Exception("Timeout 10s")
+                logger.warning(f"⏳ {model_name} bị quá thời gian (timeout 20s) → thử model tiếp theo")
+                last_error = Exception("Timeout 20s")
                 break  # Bỏ qua model bị nghẽn, thử model tiếp theo
 
             except Exception as e:
                 err_str = str(e)
                 last_error = e
 
-                is_retryable = "503" in err_str or "UNAVAILABLE" in err_str
-                is_quota     = "429" in err_str or "RESOURCE_EXHAUSTED" in err_str
+                is_retryable = "503" in err_str or "UNAVAILABLE" in err_str or "502" in err_str or "504" in err_str
+                is_quota     = "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "402" in err_str or "Insufficient Funds" in err_str
                 is_not_found = "404" in err_str or "NOT_FOUND" in err_str
 
                 if is_not_found:
@@ -157,12 +159,12 @@ async def call_gemini_with_fallback(
                     break
 
                 if is_quota:
-                    logger.warning(f"⚠️  {model_name} hết quota → thử model tiếp theo")
+                    logger.warning(f"⚠️  {model_name} hết quota hoặc lỗi số dư → thử model tiếp theo")
                     break
 
                 if is_retryable and attempt < max_retries:
                     wait = retry_delay * (attempt + 1)
-                    logger.warning(f"⚠️  {model_name} 503, thử lại sau {wait:.0f}s...")
+                    logger.warning(f"⚠️  {model_name} gặp lỗi kết nối, thử lại sau {wait:.0f}s...")
                     await asyncio.sleep(wait)
                     continue
 
@@ -172,7 +174,7 @@ async def call_gemini_with_fallback(
     # Tất cả model đều thất bại
     raise HTTPException(
         status_code=502,
-        detail=f"Tất cả model Gemini đều lỗi. Lỗi cuối: {str(last_error)[:300]}"
+        detail=f"Tất cả model OpenRouter đều lỗi. Lỗi cuối: {str(last_error)[:300]}"
     )
 
 
@@ -197,7 +199,7 @@ async def query_chatbot(req: ChatRequest):
         return ChatResponse(
             response=(
                 "<p>👋 <strong>Xin chào!</strong> Mình là Trợ lý ảo HAUDOCSSHARE — "
-                "được hỗ trợ bởi <strong>Google Gemini AI</strong>.<br>"
+                "được hỗ trợ bởi <strong>AI OpenRouter (Gemini / Llama)</strong>.<br>"
                 "Hỏi mình về tài liệu, cách sử dụng hệ thống hay bất cứ điều gì nhé!</p>"
             ),
             suggestions=["Tìm tài liệu Đại số", "Cách đăng tài liệu?", "Quy chế kiểm duyệt?"],
@@ -214,17 +216,15 @@ async def query_chatbot(req: ChatRequest):
     # 2. Build prompt
     user_prompt = build_user_prompt(user_msg, docs, categories)
 
-    # 3. Build lịch sử chat
-    chat_history: list[types.Content] = []
+    # 3. Build lịch sử chat (OpenAI format)
+    chat_history = []
     if req.history:
         for h in req.history[-6:]:
-            role = h.role if h.role in ("user", "model") else "user"
-            chat_history.append(
-                types.Content(role=role, parts=[types.Part(text=h.content)])
-            )
+            role = "assistant" if h.role == "model" else "user"
+            chat_history.append({"role": role, "content": h.content})
 
-    # 4. Gọi Gemini với retry + fallback (Async)
-    raw_text, model_used = await call_gemini_with_fallback(
+    # 4. Gọi OpenRouter với retry + fallback (Async)
+    raw_text, model_used = await call_openrouter_with_fallback(
         prompt=user_prompt,
         system=SYSTEM_PROMPT,
         history=chat_history,

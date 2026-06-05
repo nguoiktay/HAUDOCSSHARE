@@ -429,3 +429,4 @@ D:\Documentshare\HAUDOCSSHARE\obj\Debug\net10.0\refint\Documentshare.dll
 D:\Documentshare\HAUDOCSSHARE\obj\Debug\net10.0\Documentshare.pdb
 D:\Documentshare\HAUDOCSSHARE\obj\Debug\net10.0\Documentshare.genruntimeconfig.cache
 D:\Documentshare\HAUDOCSSHARE\obj\Debug\net10.0\ref\Documentshare.dll
+D:\Documentshare\HAUDOCSSHARE\obj\Debug\net10.0\staticwebassets.upToDateCheck.txt
