@@ -23,14 +23,14 @@ from prompts import (
     parse_suggestions_from_response,
 )
 
-# ─── Logging ────────────────────────────────────────────────────────────────
+# Cấu hình hệ thống ghi log (logging)
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
 logger = logging.getLogger("chatbot_ai")
 
-# ─── Load .env ───────────────────────────────────────────────────────────────
+# Tải cấu hình biến môi trường từ file .env
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
@@ -45,7 +45,7 @@ MODEL_PRIORITY = [
     "meta-llama/llama-3.2-3b-instruct:free",
 ]
 
-# ─── OpenRouter client ────────────────────────────────────────────────────────────
+# Khởi tạo đối tượng kết nối với OpenRouter API
 ai_client: AsyncOpenAI | None = None
 
 
@@ -63,7 +63,7 @@ async def lifespan(app: FastAPI):
     logger.info("🛑 Chatbot AI Service đã tắt.")
 
 
-# ─── FastAPI app ─────────────────────────────────────────────────────────────
+# Khởi tạo ứng dụng FastAPI và cấu hình CORS để giao tiếp với frontend
 app = FastAPI(
     title="HAUDOCSSHARE AI Chatbot Service",
     description="Trợ lý ảo thông minh dùng OpenRouter AI — có retry & model fallback",
@@ -79,7 +79,7 @@ app.add_middleware(
 )
 
 
-# ─── Schemas ─────────────────────────────────────────────────────────────────
+# Định nghĩa các cấu trúc dữ liệu (Schemas) đầu vào và đầu ra cho API
 class ChatHistoryItem(BaseModel):
     role: str       # "user" hoặc "model"
     content: str
@@ -97,7 +97,7 @@ class ChatResponse(BaseModel):
     model_used: str = ""
 
 
-# ─── Helper: Gọi OpenRouter với retry + model fallback (Async) ────────────────
+# Hàm trợ giúp: Gọi OpenRouter API với cơ chế tự động thử lại và dự phòng lỗi (fallback)
 async def call_openrouter_with_fallback(
     prompt: str,
     system: str,
@@ -178,7 +178,7 @@ async def call_openrouter_with_fallback(
     )
 
 
-# ─── Endpoints ───────────────────────────────────────────────────────────────
+# Định nghĩa các đường dẫn API (Endpoints) cho chatbot
 @app.get("/health")
 def health_check():
     return {

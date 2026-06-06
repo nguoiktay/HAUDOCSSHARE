@@ -21,6 +21,15 @@
     var userName        = Context.Session.GetString("UserName") ?? "";
     var isLoggedIn      = !string.IsNullOrEmpty(userName);
     var isAdmin         = userRole == "Admin";
+
+    // Đọc thông tin footer từ database, dùng giá trị mặc định nếu DB chưa có dữ liệu
+    var dbCtx = Context.RequestServices.GetService<Documentshare.Data.AppDbContext>();
+    var siteSettings = dbCtx?.SiteSettings.FirstOrDefault();
+    var footerEmail   = siteSettings?.FooterEmail   ?? "admin@haudocsshare.local";
+    var footerAddress = siteSettings?.FooterAddress  ?? "Văn phòng tại Trường Đại học Kiến trúc Hà Nội";
+    var footerDesc    = siteSettings?.SiteDescription ?? "Nền tảng chia sẻ tài liệu học tập, nghiên cứu &amp; chuyên môn cho mọi lĩnh vực.";
+    var footerTagline = siteSettings?.FooterTagline  ?? "Xây dựng bằng ASP.NET Core 10 &amp; SQLite";
+    var footerCopy    = siteSettings?.CopyrightText  ?? "© 2026 HAUDOCSSHARE";
 }
 <body>
 <div class="glow-blob blob-1"></div>
@@ -121,6 +130,12 @@
                                             <i class="bi bi-people me-2"></i>Quản lý User
                                         </a>
                                     </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Admin" asp-action="SiteSettings"
+                                           style="color:var(--text-primary);border-radius:8px;font-size:.875rem;">
+                                            <i class="bi bi-gear me-2"></i>Cài đặt Footer
+                                        </a>
+                                    </li>
                                     <li><hr style="border-color:var(--card-border);margin:.25rem 0;"></li>
                                 }
                                 <li>
@@ -190,12 +205,18 @@
                         <i class="bi bi-journal-bookmark-fill"></i> HAUDOCSSHARE
                     </span>
                 </div>
-                <p class="mb-0" style="color:var(--text-secondary);">Nền tảng chia sẻ tài liệu học tập, nghiên cứu &amp; chuyên môn cho mọi lĩnh vực.</p>
+                <p class="mb-1" style="color:var(--text-secondary);">@footerDesc</p>
+                <p class="mb-0 small" style="color:var(--text-muted);">
+                    <i class="bi bi-envelope me-1"></i>@footerEmail
+                </p>
+                <p class="mb-0 small" style="color:var(--text-muted);">
+                    <i class="bi bi-geo-alt me-1"></i>@footerAddress
+                </p>
             </div>
             <div class="col-md-6 text-md-end">
                 <p class="mb-0" style="color:var(--text-muted);">
-                    Xây dựng bằng <strong>ASP.NET Core 10</strong> &amp; <strong>SQLite</strong>
-                    &nbsp;·&nbsp; &copy; 2026 HAUDOCSSHARE
+                    @footerTagline
+                    &nbsp;·&nbsp; @footerCopy
                 </p>
             </div>
         </div>

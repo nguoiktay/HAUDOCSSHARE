@@ -12,6 +12,7 @@ namespace Documentshare.Data
         public DbSet<Document> Documents { get; set; }
         public DbSet<Comment> Comments { get; set; }
         public DbSet<User> Users { get; set; }
+        public DbSet<SiteSettings> SiteSettings { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -61,6 +62,20 @@ namespace Documentshare.Data
                     Role        = "Admin",
                     CreatedAt   = new DateTime(2026, 1, 1),
                     IsActive    = true
+                }
+            );
+
+            // Seed dữ liệu thông tin footer mặc định — Admin có thể thay đổi qua Admin Panel
+            modelBuilder.Entity<SiteSettings>().HasData(
+                new SiteSettings
+                {
+                    Id             = 1,
+                    SiteName       = "HAUDOCSSHARE",
+                    SiteDescription = "Nền tảng chia sẻ tài liệu học tập, nghiên cứu & chuyên môn cho mọi lĩnh vực.",
+                    FooterEmail    = "admin@haudocsshare.local",
+                    FooterAddress  = "Văn phòng tại Trường Đại học Kiến trúc Hà Nội",
+                    CopyrightText  = "© 2026 HAUDOCSSHARE",
+                    FooterTagline  = "Xây dựng bằng ASP.NET Core 10 & SQLite"
                 }
             );
         }

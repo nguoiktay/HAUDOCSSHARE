@@ -1,0 +1,121 @@
+@model Documentshare.Models.SiteSettings
+@{
+    ViewData["Title"] = "Cài đặt Footer Website";
+}
+
+<div class="container py-4">
+
+    <div class="d-flex align-items-center gap-3 mb-4">
+        <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Quay lại
+        </a>
+        <div>
+            <h4 class="mb-0 fw-bold"><i class="bi bi-gear-fill me-2 text-warning"></i>Cài đặt thông tin Footer</h4>
+            <small class="text-muted">Thay đổi thông tin hiển thị ở cuối trang web</small>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card" style="background:var(--bg-surface);border:1px solid var(--card-border);border-radius:16px;">
+                <div class="card-body p-4">
+
+                    <form asp-action="SaveSiteSettings" method="post">
+                        @Html.AntiForgeryToken()
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-type me-1 text-info"></i>Tên website
+                            </label>
+                            <input asp-for="SiteName" class="form-control" placeholder="HAUDOCSSHARE" />
+                            <span asp-validation-for="SiteName" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-chat-text me-1 text-info"></i>Mô tả ngắn (hiển thị dưới logo footer)
+                            </label>
+                            <textarea asp-for="SiteDescription" class="form-control" rows="2"
+                                      placeholder="Nền tảng chia sẻ tài liệu học tập..."></textarea>
+                            <span asp-validation-for="SiteDescription" class="text-danger small"></span>
+                        </div>
+
+                        <hr style="border-color:var(--card-border);" />
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-envelope me-1 text-success"></i>Email liên hệ
+                            </label>
+                            <input asp-for="FooterEmail" class="form-control" placeholder="admin@haudocsshare.local" />
+                            <span asp-validation-for="FooterEmail" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-geo-alt me-1 text-success"></i>Địa điểm / Văn phòng
+                            </label>
+                            <input asp-for="FooterAddress" class="form-control"
+                                   placeholder="Văn phòng tại Trường Đại học Kiến trúc Hà Nội" />
+                            <span asp-validation-for="FooterAddress" class="text-danger small"></span>
+                        </div>
+
+                        <hr style="border-color:var(--card-border);" />
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-code-slash me-1 text-warning"></i>Dòng thông tin kỹ thuật (phải footer)
+                            </label>
+                            <input asp-for="FooterTagline" class="form-control"
+                                   placeholder="Xây dựng bằng ASP.NET Core 10 & SQLite" />
+                            <span asp-validation-for="FooterTagline" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-c-circle me-1 text-warning"></i>Dòng bản quyền
+                            </label>
+                            <input asp-for="CopyrightText" class="form-control" placeholder="© 2026 HAUDOCSSHARE" />
+                            <span asp-validation-for="CopyrightText" class="text-danger small"></span>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="bi bi-save me-2"></i>Lưu thay đổi
+                            </button>
+                            <a asp-action="Index" class="btn btn-outline-secondary">Hủy</a>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+
+            <div class="card mt-4" style="background:var(--bg-surface);border:1px solid var(--card-border);border-radius:16px;">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold mb-3"><i class="bi bi-eye me-2 text-info"></i>Xem trước Footer</h6>
+                    <div style="background:var(--bg-elevated);border-radius:12px;padding:1.25rem;">
+                        <div class="row align-items-center g-2">
+                            <div class="col-md-6">
+                                <div class="fw-bold mb-1" style="background:linear-gradient(135deg,#818cf8,#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">
+                                    <i class="bi bi-journal-bookmark-fill"></i> @Model.SiteName
+                                </div>
+                                <p class="mb-1 small text-muted">@Model.SiteDescription</p>
+                                <p class="mb-0 small text-muted">
+                                    <i class="bi bi-envelope me-1"></i>@Model.FooterEmail
+                                </p>
+                                <p class="mb-0 small text-muted">
+                                    <i class="bi bi-geo-alt me-1"></i>@Model.FooterAddress
+                                </p>
+                            </div>
+                            <div class="col-md-6 text-md-end">
+                                <p class="mb-0 small text-muted">
+                                    @Model.FooterTagline &nbsp;·&nbsp; @Model.CopyrightText
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>

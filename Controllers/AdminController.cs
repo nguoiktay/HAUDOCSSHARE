@@ -193,5 +193,47 @@ namespace Documentshare.Controllers
             }
             return RedirectToAction(nameof(Documents));
         }
+        // Trang cài đặt thông tin footer trang web
+        public async Task<IActionResult> SiteSettings()
+        {
+            if (!IsAdmin()) return RedirectIfNotAdmin();
+
+            // Lấy cài đặt hiện tại, nếu chưa có thì tạo mới
+            var settings = await _ctx.SiteSettings.FirstOrDefaultAsync();
+            if (settings == null)
+            {
+                settings = new SiteSettings();
+                _ctx.SiteSettings.Add(settings);
+                await _ctx.SaveChangesAsync();
+            }
+            return View(settings);
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveSiteSettings(SiteSettings model)
+        {
+            if (!IsAdmin()) return Unauthorized();
+            if (!ModelState.IsValid) return View("SiteSettings", model);
+
+            var settings = await _ctx.SiteSettings.FirstOrDefaultAsync();
+            if (settings == null)
+            {
+                // Nếu chưa có bản ghi nào, tạo mới
+                settings = new SiteSettings();
+                _ctx.SiteSettings.Add(settings);
+            }
+
+            // Cập nhật từng trường thông tin footer
+            settings.SiteName        = model.SiteName?.Trim() ?? settings.SiteName;
+            settings.SiteDescription = model.SiteDescription?.Trim() ?? settings.SiteDescription;
+            settings.FooterEmail     = model.FooterEmail?.Trim() ?? settings.FooterEmail;
+            settings.FooterAddress   = model.FooterAddress?.Trim() ?? settings.FooterAddress;
+            settings.CopyrightText   = model.CopyrightText?.Trim() ?? settings.CopyrightText;
+            settings.FooterTagline   = model.FooterTagline?.Trim() ?? settings.FooterTagline;
+
+            await _ctx.SaveChangesAsync();
+            TempData["SuccessMessage"] = "Đã lưu thông tin footer trang web thành công!";
+            return RedirectToAction(nameof(SiteSettings));
+        }
     }
 }
